@@ -1,3 +1,4 @@
+from utils import registrar_log
 from database import Database
 
 def registrar_saida():
@@ -26,6 +27,8 @@ def registrar_saida():
                     cursor.execute(sql, (nova_qtd, id_produto))
                     
                     conexao.commit()
+                    registrar_log(id_produto, 'SAIDA', quantidade_saida)
+                    print("📜 Movimentação registrada no histórico.")
                     print(f"\n✅ Saída registrada! {nome_atual}: {qtd_atual} -> {nova_qtd}")
                 else:
                     print(f"\n⚠️ Estoque insuficiente! Saldo atual: {qtd_atual}")

@@ -7,12 +7,8 @@ def listar_todos_produtos():
     if conexao:
         try:
             cursor = conexao.cursor()
-            
-            # Comando SQL para buscar tudo da tabela produtos
             sql = "SELECT id, nome, quantidade, preco_custo, data_entrada FROM produtos"
             cursor.execute(sql)
-            
-            # O fetchall() pega todas as linhas que o banco encontrou
             resultados = cursor.fetchall()
             
             print("\n--- RELATÓRIO DE INVENTÁRIO (FLOWLOG) ---")
@@ -21,7 +17,6 @@ def listar_todos_produtos():
             
             for produto in resultados:
                 id_p, nome, qtd, preco, data = produto
-                # Formatando a exibição para ficar alinhada
                 print(f"{id_p:<4} | {nome:<25} | {qtd:<5} | R$ {preco:<10.2f}")
             
             print("-" * 50)
@@ -31,5 +26,29 @@ def listar_todos_produtos():
         except Exception as e:
             print(f"❌ Erro ao listar produtos: {e}")
 
+# A função precisa estar aqui, fora do bloco 'if __name__'
+def alerta_estoque_baixo():
+    db = Database()
+    conexao = db.connect()
+    if conexao:
+        try:
+            cursor = conexao.cursor()
+            cursor.execute("SELECT nome, quantidade FROM produtos WHERE quantidade < 5")
+            criticos = cursor.fetchall()
+            
+            if criticos:
+                print("\n" + "!" * 40)
+                print("⚠️  ATENÇÃO: ITENS COM ESTOQUE BAIXO!")
+                for nome, qtd in criticos:
+                    print(f" - {nome}: apenas {qtd} unidades!")
+                print("!" * 40)
+            
+            cursor.close()
+            conexao.close()
+        except Exception as e:
+            print(f"Erro ao verificar alertas: {e}")
+
+# Este bloco fica SEMPRE no final do arquivo
 if __name__ == "__main__":
     listar_todos_produtos() 
+    alerta_estoque_baixo()

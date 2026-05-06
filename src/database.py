@@ -14,7 +14,7 @@ class Database:
             'password': os.getenv('DB_PASSWORD'),
             'database': os.getenv('DB_NAME'),
             'auth_plugin': 'mysql_native_password'
-}
+        }
 
     def connect(self):
         try:
