@@ -2,6 +2,7 @@ from listar_produtos import listar_todos_produtos, alerta_estoque_baixo
 from cadastro_interativo import cadastrar_produto_interativo
 from saida_estoque import registrar_saida
 from ver_historico import exibir_relatorio_movimentacoes
+from gerenciar_fornecedor import listar_produtos_por_fornecedor
 
 def menu():
     # 1. O alerta roda aqui, uma única vez ao iniciar
@@ -16,6 +17,7 @@ def menu():
         print("2. Cadastrar Novo Produto")
         print("3. Registrar Saída (Baixa)")
         print("4. Ver Histórico de Movimentações")
+        print("5. Listar Produtos por Fornecedor")
         print("0. Sair")
         print("="*40)
         
@@ -31,6 +33,8 @@ def menu():
             alerta_estoque_baixo() 
         elif opcao == "4":
             exibir_relatorio_movimentacoes()
+        elif opcao == "5":
+            listar_produtos_por_fornecedor()
         elif opcao == "0":
             print("\nEncerrando o sistema... Bom descanso, Pedro!")
             break
