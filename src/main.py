@@ -3,6 +3,7 @@ from cadastro_interativo import cadastrar_produto_interativo
 from saida_estoque import registrar_saida
 from ver_historico import exibir_relatorio_movimentacoes
 from gerenciar_fornecedor import listar_produtos_por_fornecedor
+from entrada import entrada
 
 def menu():
     # 1. O alerta roda aqui, uma única vez ao iniciar
@@ -18,6 +19,7 @@ def menu():
         print("3. Registrar Saída (Baixa)")
         print("4. Ver Histórico de Movimentações")
         print("5. Listar Produtos por Fornecedor")
+        print("6. Entrada de estoque")
         print("0. Sair")
         print("="*40)
         
@@ -29,12 +31,13 @@ def menu():
             cadastrar_produto_interativo()
         elif opcao == "3":
             registrar_saida()
-            # Opcional: rodar o alerta de novo após uma saída para atualizar
             alerta_estoque_baixo() 
         elif opcao == "4":
             exibir_relatorio_movimentacoes()
         elif opcao == "5":
             listar_produtos_por_fornecedor()
+        elif opcao == "6":
+            entrada()
         elif opcao == "0":
             print("\nEncerrando o sistema... Bom descanso, Pedro!")
             break
