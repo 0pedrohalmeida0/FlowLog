@@ -1,4 +1,11 @@
+import re
 from database import Database
+
+def normalize_cnpj(cnpj):
+    """Remove caracteres não numéricos de um CNPJ para comparações.
+    """
+    return re.sub(r'\D', '', str(cnpj) or '')
+
 
 def registrar_log(produto_id, tipo, quantidade):
     db = Database()

@@ -1,4 +1,5 @@
 from database import Database
+from utils import normalize_cnpj
 
 def gerenciar_fornecedor_interativo():
     db = Database()
@@ -9,10 +10,13 @@ def gerenciar_fornecedor_interativo():
             print("\n--- GERENCIAR FORNECEDOR ---")
             
             # 1. Busca o fornecedor pelo CNPJ
-            cnpj_alvo = input("Digite o CNPJ do fornecedor que deseja gerenciar: ")
+            cnpj_alvo = normalize_cnpj(input("Digite o CNPJ do fornecedor que deseja gerenciar: "))
             
             cursor = conexao.cursor()
-            sql_busca = "SELECT id, razao_social FROM fornecedores WHERE cnpj = %s"
+            sql_busca = (
+                "SELECT id, razao_social FROM fornecedores "
+                "WHERE REPLACE(REPLACE(REPLACE(REPLACE(cnpj, '.', ''), '/', ''), '-', ''), ' ', '') = %s"
+            )
             cursor.execute(sql_busca, (cnpj_alvo,))
             resultado = cursor.fetchone()
             

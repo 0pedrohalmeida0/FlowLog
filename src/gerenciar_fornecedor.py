@@ -1,4 +1,5 @@
 from database import Database
+from utils import normalize_cnpj
 
 def listar_produtos_por_fornecedor():
     db = Database()
@@ -7,12 +8,15 @@ def listar_produtos_por_fornecedor():
     if conexao:
         try:
             print("\n--- LISTAR PRODUTOS POR FORNECEDOR ---")
-            cnpj_alvo = input("Digite o CNPJ do fornecedor: ")
+            cnpj_alvo = normalize_cnpj(input("Digite o CNPJ do fornecedor: "))
             
             cursor = conexao.cursor()
             
             # PASSO 1: Buscar o fornecedor pelo CNPJ 
-            sql_busca_fornec = "SELECT id, razao_social FROM fornecedores WHERE cnpj = %s"
+            sql_busca_fornec = (
+                "SELECT id, razao_social FROM fornecedores "
+                "WHERE REPLACE(REPLACE(REPLACE(REPLACE(cnpj, '.', ''), '/', ''), '-', ''), ' ', '') = %s"
+            )
             cursor.execute(sql_busca_fornec, (cnpj_alvo,))
             fornecedor = cursor.fetchone()
             

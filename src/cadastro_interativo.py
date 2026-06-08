@@ -1,4 +1,5 @@
 from database import Database
+from utils import normalize_cnpj
 
 def cadastrar_produto_interativo():
     db = Database()
@@ -14,12 +15,15 @@ def cadastrar_produto_interativo():
             preco = float(input("Digite o preço de custo (ex: 10.50): "))
             
             # Coletando o CNPJ para iniciar a lógica do fornecedor
-            cnpj_fornecedor = input("Digite o CNPJ do fornecedor: ")
+            cnpj_fornecedor = normalize_cnpj(input("Digite o CNPJ do fornecedor: "))
             
             cursor = conexao.cursor()
             
             # 1. Faz uma busca (SELECT) no banco para ver se o CNPJ já existe
-            sql_busca_fornecedor = "SELECT id FROM fornecedores WHERE cnpj = %s"
+            sql_busca_fornecedor = (
+                "SELECT id FROM fornecedores "
+                "WHERE REPLACE(REPLACE(REPLACE(REPLACE(cnpj, '.', ''), '/', ''), '-', ''), ' ', '') = %s"
+            )
             cursor.execute(sql_busca_fornecedor, (cnpj_fornecedor,))
             resultado = cursor.fetchone() 
             
