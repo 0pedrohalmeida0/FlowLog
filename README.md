@@ -11,11 +11,12 @@
 FlowLog is a robust inventory control system developed in Python and integrated with a MySQL database. Focused on logistical efficiency, the system automates stock tracking, balance validations, and movement auditing directly through the terminal.
 
 ### Current Features
+* **Role-Based Access Control (RBAC):** Three-tier hierarchical security system (Operator, Manager, IT Admin) with secure authentication and restricted action permissions.
 * **Centralized Main Menu:** An intuitive terminal interface for seamless navigation between all system modules.
-* **Product Management:** Interactive registration and detailed physical inventory listing.
-* **Smart Stock Outflow:** Processes inventory pull-outs with automatic balance verification, preventing negative stock levels.
+* **Product & Supplier Management:** Interactive registration, physical inventory listing, and supplier-specific product filtering with automated CNPJ formatting.
+* **Smart Inbound & Outbound Logistics:** Processes stock entries and pull-outs using strictly ID-based tracking, with automatic balance verification to prevent negative stock.
+* **Dynamic Movement Auditing (Logs):** Detailed tracking of every transaction (Entries and Exits). Includes case-insensitive dynamic reporting and SQL `JOIN`s for analytical auditing.
 * **Critical Stock Alert:** Automatic notification triggered on system startup for items with fewer than 5 units in stock.
-* **Movement History (Logs):** Detailed tracking of every outbound transaction, utilizing SQL table relationships (`JOIN`) for analytical auditing.
 * **Data Security:** Implementation of environment variables (`.env`) for credentials management and strict defense against *SQL Injection*.
 
 ### Technologies Used
@@ -29,11 +30,12 @@ FlowLog is a robust inventory control system developed in Python and integrated 
 O FlowLog é um sistema de controle de estoque robusto desenvolvido em Python com integração ao banco de dados MySQL. Focado em eficiência logística, o sistema automatiza o rastreio de mercadorias, validações de saldo e auditoria de movimentações diretamente pelo terminal.
 
 ### Funcionalidades Atuais
+* **Controle de Acesso Hierárquico (RBAC):** Sistema de segurança em três níveis (Operador, Gerência, Admin TI) com login obrigatório e bloqueio de telas por permissão de usuário.
 * **Menu Principal Centralizado:** Interface intuitiva via terminal para navegação fluida entre todas as ferramentas do sistema.
-* **Gestão de Produtos:** Cadastro interativo e listagem detalhada do inventário físico.
-* **Saída de Estoque Inteligente:** Realiza baixas no inventário com verificação automática de saldo, impedindo estoque negativo.
+* **Gestão de Produtos e Fornecedores:** Cadastro interativo, listagem física e filtro de produtos por fornecedor com formatação automatizada de CNPJ (limpeza de caracteres).
+* **Logística Inteligente de Entrada e Saída:** Processamento de recebimentos e baixas utilizando rastreio rígido por ID, com verificação matemática para impedir saldo negativo.
+* **Auditoria Dinâmica de Movimentações (Logs):** Registro e extrato filtrável de Entradas e Saídas, blindado contra erros de digitação (busca *case-insensitive*) utilizando relacionamentos SQL (`JOIN`).
 * **Alerta de Estoque Crítico:** Notificação automática logo na inicialização para itens com menos de 5 unidades.
-* **Histórico de Movimentações (Logs):** Registro detalhado de cada saída, utilizando relacionamentos de tabelas (`JOIN`) para auditoria analítica.
 * **Segurança de Dados:** Implementação de variáveis de ambiente (`.env`) para credenciais e proteção rigorosa contra *SQL Injection*.
 
 ### Tecnologias Utilizadas
