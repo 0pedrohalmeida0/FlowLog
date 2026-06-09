@@ -6,6 +6,7 @@ from gerenciar_fornecedor import listar_produtos_por_fornecedor
 from entrada import entrada
 from login import fazer_login
 from cadastrar_usuario import cadastrar_usuario
+from configurar_alerta import atualizar_alerta
 
 def menu():
     nivel_usuario = fazer_login()
@@ -26,6 +27,7 @@ def menu():
         print("5. Listar Produtos por Fornecedor")
         print("6. Entrada de estoque")
         print("7. Cadastrar Novo Usuário (Administrador)")
+        print("8. Configurar Alerta de Estoque")
         print("0. Sair")
         print("="*40)
         
@@ -71,6 +73,12 @@ def menu():
                 print("\n⛔ Acesso Negado: Apenas a Administração (Nível 3) pode cadastrar novos usuários.")
             else:
                 cadastrar_usuario()
+                
+        elif opcao == "8":
+            if nivel_usuario == 1:
+                print("\n⛔ Acesso Negado: Apenas usuários autorizados.")
+            else:
+                atualizar_alerta()
 
         elif opcao == "0":
             print("\nEncerrando o sistema... Bom descanso!")

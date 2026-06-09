@@ -14,6 +14,21 @@ def cadastrar_produto_interativo():
             quantidade = int(input("Digite a quantidade em estoque: "))
             preco = float(input("Digite o preço de custo (ex: 10.50): "))
             
+            
+            alerta_minimo = None
+            while True:
+                resposta_alerta = input("Deseja configurar um alerta de estoque mínimo para este produto? (S/N): ").strip().upper()
+                if resposta_alerta == "S":
+                    alerta_minimo = int(input("Digite a quantidade mínima para alerta: "))
+                    break
+                elif resposta_alerta == "N":
+                    break
+                else:
+                    print("Resposta inválida. Digite apenas 'S' ou 'N'.")
+                    
+                db = Database()
+                conexao = db.connect()
+
             # Coletando o CNPJ para iniciar a lógica do fornecedor
             cnpj_fornecedor = normalize_cnpj(input("Digite o CNPJ do fornecedor: "))
             

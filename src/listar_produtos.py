@@ -30,23 +30,30 @@ def listar_todos_produtos():
 def alerta_estoque_baixo():
     db = Database()
     conexao = db.connect()
+    
     if conexao:
         try:
             cursor = conexao.cursor()
-            cursor.execute("SELECT nome, quantidade FROM produtos WHERE quantidade < 5")
-            criticos = cursor.fetchall()
             
-            if criticos:
-                print("\n" + "!" * 40)
-                print("⚠️  ATENÇÃO: ITENS COM ESTOQUE BAIXO!")
-                for nome, qtd in criticos:
-                    print(f" - {nome}: apenas {qtd} unidades!")
-                print("!" * 40)
+            # O NOVO COMANDO SQL INTELIGENTE
+            sql = "SELECT nome, quantidade, alerta_minimo FROM produtos WHERE alerta_minimo IS NOT NULL AND quantidade <= alerta_minimo"
+            cursor.execute(sql)
+            produtos_baixos = cursor.fetchall()
             
+            if produtos_baixos:
+                print("\n" + "!"*40)
+                print(" 🚨 ALERTA DE ESTOQUE CRÍTICO 🚨")
+                print("!"*40)
+                for produto in produtos_baixos:
+                    # produto[0] = nome | produto[1] = quantidade | produto[2] = alerta_minimo
+                    print(f"⚠️ {produto[0]}: Restam apenas {produto[1]} unidades! (Mínimo: {produto[2]})")
+                print("!"*40 + "\n")
+                
             cursor.close()
             conexao.close()
+            
         except Exception as e:
-            print(f"Erro ao verificar alertas: {e}")
+            print(f"Erro ao verificar alertas de estoque: {e}")
 
 # Este bloco fica SEMPRE no final do arquivo
 if __name__ == "__main__":
