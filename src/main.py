@@ -7,6 +7,7 @@ from entrada import entrada
 from login import fazer_login
 from cadastrar_usuario import cadastrar_usuario
 from configurar_alerta import atualizar_alerta
+from relatorio_curva import relatorio_curva_abc
 
 def menu():
     nivel_usuario = fazer_login()
@@ -28,6 +29,7 @@ def menu():
         print("6. Entrada de estoque")
         print("7. Cadastrar Novo Usuário (Administrador)")
         print("8. Configurar Alerta de Estoque")
+        print("9. Relatório de Curva ABC (Giro de Estoque)")
         print("0. Sair")
         print("="*40)
         
@@ -79,6 +81,12 @@ def menu():
                 print("\n⛔ Acesso Negado: Apenas usuários autorizados.")
             else:
                 atualizar_alerta()
+                
+        elif opcao == "9":
+            if nivel_usuario == 1:
+                print("\n⛔ Acesso Negado: Apenas usuários autorizados.")
+            else:
+                relatorio_curva_abc()
 
         elif opcao == "0":
             print("\nEncerrando o sistema... Bom descanso!")
