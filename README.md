@@ -17,7 +17,8 @@ FlowLog is a robust inventory control system developed in Python and integrated 
 * **Smart Inbound & Outbound Logistics:** Processes stock entries and pull-outs using strictly ID-based tracking, with automatic balance verification to prevent negative stock.
 * **Dynamic Movement Auditing (Logs):** Detailed tracking of every transaction (Entries and Exits). Includes case-insensitive dynamic reporting and SQL `JOIN`s for analytical auditing.
 * **Critical Stock Alert:** Automatic notification triggered on system startup for items with fewer than 5 units in stock.
-* **Data Security:** Implementation of environment variables (`.env`) for credentials management and strict defense against *SQL Injection*.
+* **Data Security:** Implementation of environment variables (`.env`) for credentials management and strict defense against *SQL Injection*
+* **ABC Curve Report (Inventory Turnover):** Strategic Business Intelligence (BI) tool utilizing SQL aggregation (`SUM`, `GROUP BY`, `JOIN`) to rank products by highest outbound volume, optimizing warehouse physical space planning.
 
 ### Technologies Used
 * **Language:** Python 3.x
@@ -37,6 +38,7 @@ O FlowLog é um sistema de controle de estoque robusto desenvolvido em Python co
 * **Auditoria Dinâmica de Movimentações (Logs):** Registro e extrato filtrável de Entradas e Saídas, blindado contra erros de digitação (busca *case-insensitive*) utilizando relacionamentos SQL (`JOIN`).
 * **Alerta de Estoque Crítico:** Notificação automática logo na inicialização para itens com menos de 5 unidades.
 * **Segurança de Dados:** Implementação de variáveis de ambiente (`.env`) para credenciais e proteção rigorosa contra *SQL Injection*.
+* **Relatório de Curva ABC (Giro de Estoque):** Ferramenta estratégica de Business Intelligence (BI) utilizando agregações SQL (`SUM`, `GROUP BY`, `JOIN`) para ranquear os produtos com maior volume de saída, auxiliando no planejamento do espaço físico do galpão.
 
 ### Tecnologias Utilizadas
 * **Linguagem:** Python 3.x
