@@ -6,6 +6,109 @@
 
 ---
 
+## v1.2 — 12 de julho de 2026 (em andamento)
+
+> *"Fechando as brechas óbvias antes de crescer."*
+> *"Closing the obvious gaps before scaling."*
+
+> **Esta versão está sendo entregue em duas partes (v1.2a e v1.2b).**
+> v1.2a já está no `main` (segurança). v1.2b vem logo em seguida (qualidade e CI).
+> *This version is being shipped in two parts (v1.2a and v1.2b). v1.2a is already on `main` (security). v1.2b follows shortly (quality and CI).*
+
+### v1.2a — Segurança 🔒
+
+#### 🇧🇷 Versão em Português
+
+**Destaques:** proteção contra brute-force, sessão com expiração automática, validação de complexidade de senha, fim do comportamento de "digita errado e o sistema fecha", arquivo `.env.example` versionado.
+
+**Em uma frase:** o login agora bloqueia a conta após 5 tentativas falhas por 15 minutos, e a sessão encerra sozinha se o terminal ficar 30 minutos ocioso.
+
+#### 🔐 Proteção contra brute-force
+
+- **Bloqueio de conta após 5 tentativas falhas.** A partir da 6ª tentativa consecutiva com senha errada, a conta fica bloqueada por 15 minutos. O contador é zerado em login bem-sucedido. As credenciais (host, duração, quantidade) são configuráveis via `.env` — `LOCKOUT_MAX_ATTEMPTS` e `LOCKOUT_DURATION_MINUTES`.
+- **Mensagem com tempo restante.** Quando o usuário tenta logar em conta bloqueada, o sistema mostra "~X min até o desbloqueio". O log registra o bloqueio com WARNING.
+- **Resistente a user enumeration.** A mensagem de "usuário não encontrado" é a mesma de "senha incorreta" — um atacante não consegue descobrir quais usernames existem.
+
+#### ⏰ Sessão com expiração automática
+
+- **Auto-logout por inatividade.** Após 30 minutos sem interação, a sessão encerra e o sistema volta para a tela de login. Configurável via `SESSION_TIMEOUT_MINUTES` no `.env`. Para desabilitar, defina como `0`.
+- **Re-prompt de login amigável.** Antes desta versão, digitar a senha errada encerrava o sistema. Agora, o login é re-prompted: o usuário pode tentar de novo, ou digitar `Q` no campo de usuário para sair.
+
+#### 🛡️ Validação de complexidade de senha
+
+- **Mínimo 6 caracteres, com pelo menos 1 letra e 1 número.** Senhas como `123` ou `abcdef` agora são rejeitadas no cadastro. A regra está em `utils.validar_senha_complexidade()` e é testável.
+- **Feedback claro no cadastro.** O loop de cadastro mostra a regra específica violada e só prossegue quando o usuário fornece uma senha que passa.
+
+#### ⚙️ Configuração externalizada
+
+- **`.env.example` na raiz do projeto.** Lista todas as variáveis lidas pelo sistema, com valores default comentados. Copie para `.env` e preencha.
+- **`requirements-dev.txt`** separa dependências de desenvolvimento (pytest, ruff, black, mypy) das de produção.
+
+#### 📊 Antes e depois
+
+| Aspecto                          | Antes                                          | Agora                                                                 |
+|----------------------------------|------------------------------------------------|-----------------------------------------------------------------------|
+| 5 tentativas erradas             | Ilimitadas, sistema fecha a cada erro          | Conta bloqueada por 15 min, log registra o bloqueio                   |
+| Sessão ociosa                    | Nunca expirava (terminal aberto = qualquer um) | Auto-logout em 30 min (configurável)                                 |
+| Senha fraca no cadastro          | Qualquer string não-vazia passava              | Mínimo 6 chars + letra + número                                      |
+| Senha errada                     | Programa encerrava                              | Re-prompt, opção de sair com `Q`                                     |
+| Variáveis de configuração        | Sem template, .env não versionado              | `.env.example` versionado, com todas as opções documentadas          |
+
+#### 📋 Migração
+
+```bash
+mysql -u root -p flowlog < migrations/v1.1_to_v1.2.sql
+```
+
+Adiciona colunas `tentativas_falhas` e `bloqueado_ate` à tabela `usuarios`. Não exige recadastrar usuários — colunas novas têm default seguro (`0` e `NULL`).
+
+#### 🇺🇸 English Version
+
+**Highlights:** brute-force protection, automatic session expiration, password complexity validation, no more "type wrong and the system quits", versioned `.env.example`.
+
+**In one sentence:** the login now locks the account after 5 failed attempts for 15 minutes, and the session ends by itself if the terminal sits idle for 30 minutes.
+
+#### 🔐 Brute-force protection
+
+- **Account lockout after 5 failed attempts.** From the 6th consecutive wrong password, the account is blocked for 15 minutes. Counter is reset on successful login. Settings (host, duration, count) are configurable via `.env` — `LOCKOUT_MAX_ATTEMPTS` and `LOCKOUT_DURATION_MINUTES`.
+- **Message with remaining time.** When the user tries to log into a blocked account, the system shows "~X min until unlock". The log records the block with WARNING.
+- **Resistant to user enumeration.** "User not found" and "wrong password" return the same message — an attacker cannot discover which usernames exist.
+
+#### ⏰ Session auto-expiration
+
+- **Auto-logout on inactivity.** After 30 minutes without interaction, the session ends and the system returns to the login screen. Configurable via `SESSION_TIMEOUT_MINUTES` in `.env`. Set to `0` to disable.
+- **Friendly login re-prompt.** Before this version, a wrong password would close the system. Now, the login re-prompts: the user can try again, or type `Q` at the username field to quit.
+
+#### 🛡️ Password complexity validation
+
+- **Minimum 6 characters, with at least 1 letter and 1 number.** Passwords like `123` or `abcdef` are now rejected at registration. The rule is in `utils.validar_senha_complexidade()` and is testable.
+- **Clear feedback at registration.** The registration loop shows the specific rule violated and only proceeds when the user provides a valid password.
+
+#### ⚙️ Externalized configuration
+
+- **`.env.example` at project root.** Lists all variables read by the system, with default values commented. Copy to `.env` and fill in.
+- **`requirements-dev.txt`** separates dev dependencies (pytest, ruff, black, mypy) from production ones.
+
+#### 📊 Before and after
+
+| Aspect                          | Before                                          | Now                                                                   |
+|---------------------------------|-------------------------------------------------|-----------------------------------------------------------------------|
+| 5 wrong attempts                | Unlimited, system closes on each error          | Account locked for 15 min, log records the block                      |
+| Idle session                    | Never expired (open terminal = anyone)          | Auto-logout at 30 min (configurable)                                  |
+| Weak password at registration   | Any non-empty string worked                     | Min 6 chars + letter + number                                        |
+| Wrong password                  | Program exited                                  | Re-prompt, option to quit with `Q`                                   |
+| Configuration variables         | No template, .env not versioned                 | `.env.example` versioned, all options documented                     |
+
+#### 📋 Migration
+
+```bash
+mysql -u root -p flowlog < migrations/v1.1_to_v1.2.sql
+```
+
+Adds `tentativas_falhas` and `bloqueado_ate` columns to the `usuarios` table. No user re-registration needed — new columns have safe defaults (`0` and `NULL`).
+
+---
+
 ## v1.1 — 12 de julho de 2026
 
 > *"Auditoria de verdade, controle de acesso limpo, Curva ABC que ajuda a decidir."*

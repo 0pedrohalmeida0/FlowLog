@@ -1,4 +1,4 @@
-"""Funções utilitárias: CNPJ, hash de senha, logger nomeado e log de movimentação."""
+"""Funções utilitárias: CNPJ, hash de senha, validação de complexidade e log."""
 
 import re
 
@@ -62,8 +62,13 @@ def formatar_cnpj(cnpj):
 
 
 # ============================================================
-# Senha (bcrypt)
+# Senha (bcrypt + complexidade)
 # ============================================================
+
+# Requisitos mínimos para uma senha ser aceita.
+# Configure no .env se quiser ajustar (v1.4+).
+MIN_SENHA_LEN = 6
+
 
 def hash_senha(senha_plana):
     """Gera o hash bcrypt da senha em texto puro.
@@ -100,6 +105,32 @@ def verificar_senha(senha_plana, hash_armazenado):
     # Senha em texto puro (legado): recusa autenticar.
     logger.warning("Senha em texto puro detectada; usuário precisa ser recadastrado")
     return False
+
+
+def validar_senha_complexidade(senha):
+    """Valida os requisitos mínimos de complexidade da senha.
+
+    Regras atuais (v1.2):
+        - Mínimo 6 caracteres
+        - Pelo menos 1 letra (a-zA-Z)
+        - Pelo menos 1 dígito (0-9)
+
+    Returns:
+        (ok: bool, mensagem: str) — quando ok=False, mensagem explica o motivo.
+    """
+    if not senha:
+        return False, "A senha não pode ser vazia."
+
+    if len(senha) < MIN_SENHA_LEN:
+        return False, f"A senha deve ter no mínimo {MIN_SENHA_LEN} caracteres."
+
+    if not re.search(r'[a-zA-Z]', senha):
+        return False, "A senha deve conter pelo menos uma letra."
+
+    if not re.search(r'\d', senha):
+        return False, "A senha deve conter pelo menos um número."
+
+    return True, ""
 
 
 # ============================================================

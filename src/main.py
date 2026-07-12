@@ -3,7 +3,15 @@
 Este é o único ponto que conhece todas as opções disponíveis e seus
 handlers. O controle de acesso é feito via decorator @requer_nivel —
 não há mais `if nivel_usuario == 1: print("Acesso Negado")` espalhado.
+
+Comportamentos de sessão (v1.2):
+    - Login falho: re-prompt (não encerra o sistema). Digite 'Q' no usuário
+      para sair.
+    - Auto-logout por inatividade: SESSION_TIMEOUT_MINUTES (env) minutos sem
+      interação encerra a sessão e volta para a tela de login.
 """
+
+import os
 
 from auth import requer_nivel
 from cadastrar_usuario import cadastrar_usuario
@@ -16,7 +24,7 @@ from logging_config import get_logger, setup_logging
 from login import fazer_login
 from relatorio_curva import relatorio_curva_abc
 from saida_estoque import registrar_saida
-from session import logout
+from session import logout, registrar_atividade, sessao_expirada
 from ver_historico import exibir_relatorio_movimentacoes
 
 
@@ -81,6 +89,14 @@ MENU_OPCOES = {
 }
 
 
+def _session_timeout():
+    """Lê o timeout de sessão do .env (0 = desabilitado)."""
+    try:
+        return int(os.getenv("SESSION_TIMEOUT_MINUTES", "30"))
+    except ValueError:
+        return 30
+
+
 def _imprimir_menu():
     print("\n" + "=" * 40)
     print("       FLOWLOG - GESTÃO DE ESTOQUE")
@@ -91,19 +107,17 @@ def _imprimir_menu():
     print("=" * 40)
 
 
-def menu():
-    setup_logging()
-    logger.info("Iniciando FlowLog")
-
-    nivel = fazer_login()
-    if not nivel:
-        logger.warning("Login falhou; encerrando")
-        return
-
-    # O alerta roda aqui, uma única vez ao iniciar
-    alerta_estoque_baixo()
-
+def _loop_menu():
+    """Loop interno do menu. Retorna quando o usuário sai ou a sessão expira."""
     while True:
+        timeout = _session_timeout()
+        if timeout > 0 and sessao_expirada(timeout):
+            logger.info("Sessão expirada por inatividade (timeout=%d min)", timeout)
+            print("\n⏰ Sessão expirada por inatividade. Faça login novamente.")
+            logout()
+            return
+
+        registrar_atividade()
         _imprimir_menu()
         opcao = input("\nEscolha uma opção: ").strip()
 
@@ -111,7 +125,7 @@ def menu():
             logger.info("Encerrando sistema")
             print("\nEncerrando o sistema... Bom descanso!")
             logout()
-            break
+            return
 
         if opcao not in MENU_OPCOES:
             print("\n⚠️ Opção inválida! Tente novamente.")
@@ -119,6 +133,31 @@ def menu():
 
         _, handler = MENU_OPCOES[opcao]
         handler()
+        # Cada ação do usuário reseta o timer de inatividade
+        registrar_atividade()
+
+
+def menu():
+    setup_logging()
+    logger.info("Iniciando FlowLog")
+
+    # Loop externo: re-prompt no login até dar certo ou o usuário pedir pra sair
+    while True:
+        nivel = fazer_login()
+        if nivel is None:
+            # Login falhou; perguntar se quer tentar de novo
+            escolha = input(
+                "\nPressione ENTER para tentar novamente, ou Q para sair: "
+            ).strip().upper()
+            if escolha == "Q":
+                logger.info("Usuário encerrou o sistema após falha de login")
+                print("\nAté logo!")
+                return
+            continue
+
+        # Login OK; rodar alerta de estoque baixo e entrar no menu
+        alerta_estoque_baixo()
+        _loop_menu()
 
 
 if __name__ == "__main__":

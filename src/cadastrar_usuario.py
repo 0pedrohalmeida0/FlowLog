@@ -1,6 +1,6 @@
 from database import Database
 from logging_config import get_logger
-from utils import hash_senha
+from utils import hash_senha, validar_senha_complexidade
 
 
 logger = get_logger(__name__)
@@ -14,10 +14,13 @@ def cadastrar_usuario():
         print("❌ Erro: nome de usuário não pode ser vazio.")
         return
 
-    nova_senha = input("Digite a senha de acesso: ")
-    if len(nova_senha) < 6:
-        print("❌ Erro: a senha deve ter no mínimo 6 caracteres.")
-        return
+    # Loop até o usuário fornecer uma senha que passa na validação
+    while True:
+        nova_senha = input("Digite a senha de acesso: ")
+        ok, msg = validar_senha_complexidade(nova_senha)
+        if ok:
+            break
+        print(f"❌ {msg}")
 
     try:
         nivel = int(input("Nível de acesso (1 - Operador | 2 - Gerente | 3 - Admin): ").strip())
