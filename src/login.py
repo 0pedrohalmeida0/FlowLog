@@ -16,7 +16,6 @@ from logging_config import get_logger
 from session import login as session_login
 from utils import verificar_senha
 
-
 logger = get_logger(__name__)
 
 
@@ -56,6 +55,7 @@ def fazer_login():
 
         try:
             import getpass
+
             senha = getpass.getpass("Senha: ")
         except (ImportError, Exception):
             senha = input("Senha: ")
@@ -82,7 +82,8 @@ def fazer_login():
             restante_int = int(restante_min) + 1
             logger.warning(
                 "Login bloqueado para '%s' (desbloqueia em ~%d min)",
-                usuario, restante_int,
+                usuario,
+                restante_int,
             )
             print(
                 f"⛔ Conta bloqueada por excesso de tentativas. "
@@ -93,14 +94,16 @@ def fazer_login():
         # Verifica a senha
         if not verificar_senha(senha, resultado["senha"]):
             return _registrar_falha_login(
-                conexao, resultado["id"], usuario, cfg,
+                conexao,
+                resultado["id"],
+                usuario,
+                cfg,
             )
 
         # Sucesso: zera tentativas, marca desbloqueio, abre sessão
         update_cursor = conexao.cursor()
         update_cursor.execute(
-            "UPDATE usuarios SET tentativas_falhas = 0, bloqueado_ate = NULL "
-            "WHERE id = %s",
+            "UPDATE usuarios SET tentativas_falhas = 0, bloqueado_ate = NULL " "WHERE id = %s",
             (resultado["id"],),
         )
         conexao.commit()
@@ -109,7 +112,9 @@ def fazer_login():
         session_login(resultado["id"], usuario, resultado["nivel_acesso"])
         logger.info(
             "Login OK: usuário='%s' id=%d nível=%d",
-            usuario, resultado["id"], resultado["nivel_acesso"],
+            usuario,
+            resultado["id"],
+            resultado["nivel_acesso"],
         )
         print(f"✅ Login aprovado! Bem-vindo(a), {usuario}. (Nível {resultado['nivel_acesso']})")
         return resultado["nivel_acesso"]
@@ -147,19 +152,17 @@ def _registrar_falha_login(conexao, usuario_id, usuario, cfg):
         if tentativas >= max_attempts:
             bloqueado_ate = datetime.now() + timedelta(minutes=duration)
             update_cur.execute(
-                "UPDATE usuarios SET tentativas_falhas = 0, bloqueado_ate = %s "
-                "WHERE id = %s",
+                "UPDATE usuarios SET tentativas_falhas = 0, bloqueado_ate = %s " "WHERE id = %s",
                 (bloqueado_ate, usuario_id),
             )
             conexao.commit()
             logger.warning(
                 "Conta '%s' BLOQUEADA após %d tentativas falhas (duração: %d min)",
-                usuario, tentativas, duration,
+                usuario,
+                tentativas,
+                duration,
             )
-            print(
-                f"⛔ Conta bloqueada por {duration} min após "
-                f"{tentativas} tentativas falhas."
-            )
+            print(f"⛔ Conta bloqueada por {duration} min após " f"{tentativas} tentativas falhas.")
         else:
             update_cur.execute(
                 "UPDATE usuarios SET tentativas_falhas = %s WHERE id = %s",
@@ -169,11 +172,12 @@ def _registrar_falha_login(conexao, usuario_id, usuario, cfg):
             restantes = max_attempts - tentativas
             logger.warning(
                 "Senha incorreta para '%s' (%d/%d)",
-                usuario, tentativas, max_attempts,
+                usuario,
+                tentativas,
+                max_attempts,
             )
             print(
-                f"❌ Senha incorreta. {restantes} tentativa(s) "
-                f"restante(s) antes do bloqueio."
+                f"❌ Senha incorreta. {restantes} tentativa(s) " f"restante(s) antes do bloqueio."
             )
     finally:
         update_cur.close()

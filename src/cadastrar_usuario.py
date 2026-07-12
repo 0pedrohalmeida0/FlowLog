@@ -2,7 +2,6 @@ from database import Database
 from logging_config import get_logger
 from utils import hash_senha, validar_senha_complexidade
 
-
 logger = get_logger(__name__)
 
 
@@ -33,7 +32,7 @@ def cadastrar_usuario():
         return
 
     # Hash bcrypt (60 chars em utf-8; coluna senha precisa de VARCHAR(60) ou mais)
-    senha_hash = hash_senha(nova_senha).decode('utf-8')
+    senha_hash = hash_senha(nova_senha).decode("utf-8")
 
     db = Database()
     conexao = db.connect()
@@ -55,7 +54,7 @@ def cadastrar_usuario():
         except Exception:
             pass
         erro = str(e).lower()
-        if 'duplicate' in erro or 'unique' in erro:
+        if "duplicate" in erro or "unique" in erro:
             logger.warning("Tentativa de cadastrar username duplicado: '%s'", novo_username)
             print(f"\n❌ Falha: o usuário '{novo_username}' já existe.")
         else:

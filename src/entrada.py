@@ -3,7 +3,6 @@ from logging_config import get_logger
 from session import usuario_id_atual
 from utils import registrar_log
 
-
 logger = get_logger(__name__)
 
 
@@ -51,11 +50,13 @@ def entrada():
 
         # Mesmo cursor = mesma transação = commit atômico no __exit__.
         usuario_id = usuario_id_atual()
-        registrar_log(cursor, id_produto, 'ENTRADA', quantidade_entrada, usuario_id)
+        registrar_log(cursor, id_produto, "ENTRADA", quantidade_entrada, usuario_id)
 
         logger.info(
             "Entrada registrada: produto_id=%d qtd=+%d usuario_id=%s",
-            id_produto, quantidade_entrada, usuario_id,
+            id_produto,
+            quantidade_entrada,
+            usuario_id,
         )
         print("📜 Movimentação registrada no histórico.")
         print(f"\n✅ Entrada registrada! {nome_atual}: {qtd_atual} -> {nova_quantidade}")

@@ -16,7 +16,6 @@ acumulado é calculado no próprio banco, sem N+1 queries.
 from database import Database
 from logging_config import get_logger
 
-
 logger = get_logger(__name__)
 
 
@@ -89,21 +88,19 @@ def relatorio_curva_abc():
         cursor.close()
 
         if not resultados:
-            print("⚠️ Nenhuma saída registrada no histórico. Faça ao menos uma saída para gerar a Curva ABC.")
+            print(
+                "⚠️ Nenhuma saída registrada no histórico. Faça ao menos uma saída para gerar a Curva ABC."
+            )
             return
 
-        print(
-            f"{'CLASSE':<4} | {'PRODUTO':<28} | {'SAÍDAS':>6} | "
-            f"{'%':>6} | {'% ACUM.':>8}"
-        )
+        print(f"{'CLASSE':<4} | {'PRODUTO':<28} | {'SAÍDAS':>6} | " f"{'%':>6} | {'% ACUM.':>8}")
         print("-" * 70)
 
         for classe, nome, total, pct, pct_acum in (
             (r[4], r[0], r[1], r[2], r[3]) for r in resultados
         ):
             print(
-                f"{classe:<4} | {nome[:28]:<28} | {total:>6} | "
-                f"{pct:>5.2f}% | {pct_acum:>7.2f}%"
+                f"{classe:<4} | {nome[:28]:<28} | {total:>6} | " f"{pct:>5.2f}% | {pct_acum:>7.2f}%"
             )
         print("-" * 70)
 
@@ -119,7 +116,10 @@ def relatorio_curva_abc():
 
         logger.info(
             "Curva ABC gerada: %d produtos (A=%d, B=%d, C=%d)",
-            len(resultados), contagem.get("A", 0), contagem.get("B", 0), contagem.get("C", 0),
+            len(resultados),
+            contagem.get("A", 0),
+            contagem.get("B", 0),
+            contagem.get("C", 0),
         )
     except Exception as e:
         logger.exception("Erro ao gerar Curva ABC")

@@ -27,7 +27,6 @@ from saida_estoque import registrar_saida
 from session import logout, registrar_atividade, sessao_expirada
 from ver_historico import exibir_relatorio_movimentacoes
 
-
 logger = get_logger(__name__)
 
 
@@ -37,6 +36,7 @@ logger = get_logger(__name__)
 # O decorator é aplicado aqui (não nos módulos de feature) para manter
 # os módulos de feature testáveis e usáveis diretamente em outros pontos
 # (ex: CLI, testes) sem depender do nível do usuário logado.
+
 
 @requer_nivel(2)
 def op_cadastrar_produto():
@@ -146,9 +146,9 @@ def menu():
         nivel = fazer_login()
         if nivel is None:
             # Login falhou; perguntar se quer tentar de novo
-            escolha = input(
-                "\nPressione ENTER para tentar novamente, ou Q para sair: "
-            ).strip().upper()
+            escolha = (
+                input("\nPressione ENTER para tentar novamente, ou Q para sair: ").strip().upper()
+            )
             if escolha == "Q":
                 logger.info("Usuário encerrou o sistema após falha de login")
                 print("\nAté logo!")

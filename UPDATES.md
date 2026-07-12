@@ -109,6 +109,92 @@ Adds `tentativas_falhas` and `bloqueado_ate` columns to the `usuarios` table. No
 
 ---
 
+### v1.2b — Qualidade e CI 🧪
+
+#### 🇧🇷 Versão em Português
+
+**Destaques:** primeira suite de testes automatizados, CI rodando em todo push, configuração centralizada de ferramentas, `CHANGELOG.md` documentando a história do projeto.
+
+**Em uma frase:** agora qualquer contribuição passa por `ruff` + `black` + `pytest` automaticamente no GitHub, então regressões são pegas antes de chegar em produção.
+
+#### 🧪 Testes automatizados
+
+- **Suite inicial com pytest.** Cobre os módulos puros (sem dependência de MySQL): CNPJ (10 casos), bcrypt (8 casos), validação de complexidade de senha (7 casos), sessão (10 casos incluindo expiração), decorator `@requer_nivel` (7 casos de RBAC). **42 testes** no total.
+- **`tests/conftest.py`** com path injection (não precisa instalar o pacote) e fixture de isolamento de sessão (cada teste começa com sessão vazia).
+- **`pyproject.toml`** centraliza config de pytest, black, ruff, mypy e coverage. Sumiu o `pytest.ini` solto, o `setup.cfg` e o `mypy.ini` — tudo num lugar.
+
+#### ⚙️ Lint e format
+
+- **Ruff** para lint (substitui flake8 + isort + pyupgrade + bugbear com performance muito maior).
+- **Black** para formatação, com `line-length=100`.
+- **Mypy** instalado mas com `disallow_untyped_defs = false` por enquanto — strict mode fica para a v1.4 (quando o código já tiver type hints).
+- **Cobertura mínima de 50%** no CI (subindo para 70% na v1.3, 80% na v1.4).
+
+#### 🤖 CI no GitHub Actions
+
+- **Roda em Python 3.10, 3.11 e 3.12** (matriz completa).
+- **Cache de pip** para builds mais rápidos.
+- **3 estágios:** `ruff check` → `black --check` → `pytest --cov`.
+- **Dispara em push para main e em todo PR.** PR que quebrar teste ou lint não pode ser mergeado.
+
+#### 📝 Documentação adicional
+
+- **`CHANGELOG.md` no padrão Keep a Changelog.** Histórico formal do projeto, em PT/EN, separado do `UPDATES.md` (que continua sendo o release notes focado em cliente).
+- **`.github/workflows/ci.yml`** versionado e pronto pra customizar.
+
+#### 📊 Antes e depois
+
+| Aspecto                          | Antes                                          | Agora                                                                 |
+|----------------------------------|------------------------------------------------|-----------------------------------------------------------------------|
+| Cobertura de testes              | Zero — tudo era teste manual                    | 42 testes automatizados cobrindo utils, session, auth                 |
+| Verificação de PRs               | Manual (reviewer tinha que rodar testes)        | Automática — CI roda lint + format + test em todo push               |
+| Lint / format                    | Inconsistente entre arquivos                    | Ruff + Black rodando no CI, configuração em pyproject.toml           |
+| Histórico do projeto             | Difícil de seguir (só git log)                  | `CHANGELOG.md` no padrão Keep a Changelog                            |
+| Configuração de ferramentas      | Espalhada em vários arquivos                    | Centralizada em `pyproject.toml`                                     |
+
+#### 🇺🇸 English Version
+
+**Highlights:** first automated test suite, CI running on every push, centralized tool configuration, `CHANGELOG.md` documenting the project's history.
+
+**In one sentence:** now every contribution goes through `ruff` + `black` + `pytest` automatically on GitHub, so regressions are caught before reaching production.
+
+#### 🧪 Automated tests
+
+- **Initial pytest suite.** Covers pure modules (no MySQL dependency): CNPJ (10 cases), bcrypt (8 cases), password complexity validation (7 cases), session (10 cases including expiration), `@requer_nivel` decorator (7 RBAC cases). **42 tests** total.
+- **`tests/conftest.py`** with path injection (no need to install the package) and session isolation fixture (each test starts with empty session).
+- **`pyproject.toml`** centralizes pytest, black, ruff, mypy and coverage config. Gone are the loose `pytest.ini`, `setup.cfg` and `mypy.ini` — everything in one place.
+
+#### ⚙️ Lint and format
+
+- **Ruff** for lint (replaces flake8 + isort + pyupgrade + bugbear with much better performance).
+- **Black** for formatting, with `line-length=100`.
+- **Mypy** installed but with `disallow_untyped_defs = false` for now — strict mode comes in v1.4 (when code already has type hints).
+- **Minimum coverage 50%** in CI (rising to 70% in v1.3, 80% in v1.4).
+
+#### 🤖 CI on GitHub Actions
+
+- **Runs on Python 3.10, 3.11 and 3.12** (full matrix).
+- **pip cache** for faster builds.
+- **3 stages:** `ruff check` → `black --check` → `pytest --cov`.
+- **Triggers on push to main and every PR.** PRs that break tests or lint cannot be merged.
+
+#### 📝 Additional documentation
+
+- **`CHANGELOG.md` in Keep a Changelog format.** Formal project history, in PT/EN, separate from `UPDATES.md` (which remains the customer-focused release notes).
+- **`.github/workflows/ci.yml`** versioned and ready to customize.
+
+#### 📊 Before and after
+
+| Aspect                          | Before                                          | Now                                                                   |
+|---------------------------------|-------------------------------------------------|-----------------------------------------------------------------------|
+| Test coverage                   | Zero — everything was manual testing             | 42 automated tests covering utils, session, auth                       |
+| PR verification                 | Manual (reviewer had to run tests)               | Automatic — CI runs lint + format + test on every push                |
+| Lint / format                   | Inconsistent across files                       | Ruff + Black running in CI, configuration in pyproject.toml           |
+| Project history                 | Hard to follow (git log only)                   | `CHANGELOG.md` in Keep a Changelog format                             |
+| Tool configuration              | Scattered across multiple files                 | Centralized in `pyproject.toml`                                       |
+
+---
+
 ## v1.1 — 12 de julho de 2026
 
 > *"Auditoria de verdade, controle de acesso limpo, Curva ABC que ajuda a decidir."*

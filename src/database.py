@@ -10,12 +10,10 @@ a cada operação.
 import os
 from contextlib import contextmanager
 
-import mysql.connector
-from mysql.connector import Error, pooling
 from dotenv import load_dotenv
+from mysql.connector import Error, pooling
 
 from logging_config import get_logger
-
 
 load_dotenv()
 

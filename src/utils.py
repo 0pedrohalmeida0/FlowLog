@@ -6,7 +6,6 @@ import bcrypt
 
 from logging_config import get_logger
 
-
 logger = get_logger(__name__)
 
 
@@ -14,9 +13,10 @@ logger = get_logger(__name__)
 # CNPJ
 # ============================================================
 
+
 def normalize_cnpj(cnpj):
     """Remove caracteres não numéricos de um CNPJ para comparações."""
-    return re.sub(r'\D', '', str(cnpj) or '')
+    return re.sub(r"\D", "", str(cnpj) or "")
 
 
 def validar_cnpj(cnpj):
@@ -77,7 +77,7 @@ def hash_senha(senha_plana):
     """
     if not senha_plana:
         raise ValueError("Senha não pode ser vazia.")
-    return bcrypt.hashpw(senha_plana.encode('utf-8'), bcrypt.gensalt())
+    return bcrypt.hashpw(senha_plana.encode("utf-8"), bcrypt.gensalt())
 
 
 def verificar_senha(senha_plana, hash_armazenado):
@@ -91,13 +91,13 @@ def verificar_senha(senha_plana, hash_armazenado):
         return False
 
     if isinstance(hash_armazenado, bytes):
-        hash_str = hash_armazenado.decode('utf-8', errors='ignore')
+        hash_str = hash_armazenado.decode("utf-8", errors="ignore")
     else:
         hash_str = str(hash_armazenado)
 
-    if hash_str.startswith('$2'):
+    if hash_str.startswith("$2"):
         try:
-            return bcrypt.checkpw(senha_plana.encode('utf-8'), hash_str.encode('utf-8'))
+            return bcrypt.checkpw(senha_plana.encode("utf-8"), hash_str.encode("utf-8"))
         except (ValueError, TypeError):
             logger.exception("Falha ao verificar hash bcrypt")
             return False
@@ -124,10 +124,10 @@ def validar_senha_complexidade(senha):
     if len(senha) < MIN_SENHA_LEN:
         return False, f"A senha deve ter no mínimo {MIN_SENHA_LEN} caracteres."
 
-    if not re.search(r'[a-zA-Z]', senha):
+    if not re.search(r"[a-zA-Z]", senha):
         return False, "A senha deve conter pelo menos uma letra."
 
-    if not re.search(r'\d', senha):
+    if not re.search(r"\d", senha):
         return False, "A senha deve conter pelo menos um número."
 
     return True, ""
@@ -136,6 +136,7 @@ def validar_senha_complexidade(senha):
 # ============================================================
 # Log de movimentação
 # ============================================================
+
 
 def registrar_log(cursor, produto_id, tipo, quantidade, usuario_id=None):
     """Insere uma linha no histórico de movimentações usando o cursor fornecido.

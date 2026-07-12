@@ -2,7 +2,6 @@ from database import Database
 from logging_config import get_logger
 from utils import formatar_cnpj, normalize_cnpj, validar_cnpj
 
-
 logger = get_logger(__name__)
 
 
@@ -42,7 +41,7 @@ def gerenciar_fornecedor_interativo():
 
         acao = input("Opção: ").strip()
 
-        if acao == '1':
+        if acao == "1":
             nova_razao = input(
                 f"Digite a nova Razão Social (atual é '{razao_social_atual}'): "
             ).strip()
@@ -58,12 +57,14 @@ def gerenciar_fornecedor_interativo():
             logger.info("Fornecedor ID=%d: razão social atualizada", fornecedor_id)
             print(f"✅ Sucesso! Razão social atualizada para '{nova_razao}'.")
 
-        elif acao == '2':
-            confirmacao = input(
-                f"⚠️ Tem certeza que deseja excluir '{razao_social_atual}'? (S/N): "
-            ).strip().upper()
+        elif acao == "2":
+            confirmacao = (
+                input(f"⚠️ Tem certeza que deseja excluir '{razao_social_atual}'? (S/N): ")
+                .strip()
+                .upper()
+            )
 
-            if confirmacao == 'S':
+            if confirmacao == "S":
                 try:
                     cursor.execute(
                         "DELETE FROM fornecedores WHERE id = %s",
@@ -82,8 +83,13 @@ def gerenciar_fornecedor_interativo():
                         pass
                     erro_texto = str(e).lower()
                     if "foreign key" in erro_texto:
-                        logger.warning("Fornecedor ID=%d tem produtos vinculados; exclusão negada", fornecedor_id)
-                        print("❌ Não é possível excluir: este fornecedor possui produtos cadastrados no estoque.")
+                        logger.warning(
+                            "Fornecedor ID=%d tem produtos vinculados; exclusão negada",
+                            fornecedor_id,
+                        )
+                        print(
+                            "❌ Não é possível excluir: este fornecedor possui produtos cadastrados no estoque."
+                        )
                     else:
                         logger.exception("Erro ao excluir fornecedor ID=%d", fornecedor_id)
                         print(f"❌ Erro ao excluir: {e}")

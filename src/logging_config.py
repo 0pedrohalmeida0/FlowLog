@@ -13,11 +13,8 @@ import logging
 import os
 from logging.handlers import RotatingFileHandler
 
-
 _CONSOLE_FORMAT = "[%(asctime)s] [%(levelname)s] %(message)s"
-_FILE_FORMAT = (
-    "%(asctime)s [%(levelname)s] %(name)s:%(lineno)d - %(message)s"
-)
+_FILE_FORMAT = "%(asctime)s [%(levelname)s] %(name)s:%(lineno)d - %(message)s"
 _DATE_FORMAT = "%H:%M:%S"
 _FILE_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 

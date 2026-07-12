@@ -2,7 +2,6 @@ from database import Database
 from logging_config import get_logger
 from utils import formatar_cnpj, normalize_cnpj, validar_cnpj
 
-
 logger = get_logger(__name__)
 
 

@@ -1,7 +1,6 @@
 from database import Database
 from logging_config import get_logger
 
-
 logger = get_logger(__name__)
 
 
@@ -9,7 +8,7 @@ logger = get_logger(__name__)
 # com a query SQL: o valor aqui é uma constante de código, validada por
 # dicionário. O parâmetro entra na query via %s, não por concatenação.
 _FILTROS_TIPO = {
-    "1": None,        # tudo
+    "1": None,  # tudo
     "2": "ENTRADA",
     "3": "SAIDA",
 }

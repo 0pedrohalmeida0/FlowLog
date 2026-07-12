@@ -1,7 +1,6 @@
 from database import Database
 from logging_config import get_logger
 
-
 logger = get_logger(__name__)
 
 
@@ -48,7 +47,9 @@ def excluir_fornecedor():
         erro_texto = str(e).lower()
         if "foreign key" in erro_texto:
             logger.warning("Tentativa de excluir fornecedor ID=%d com produtos vinculados", id_alvo)
-            print("❌ Não é possível excluir este fornecedor porque ele está associado a produtos. Por favor, remova ou altere os produtos relacionados antes de tentar novamente.")
+            print(
+                "❌ Não é possível excluir este fornecedor porque ele está associado a produtos. Por favor, remova ou altere os produtos relacionados antes de tentar novamente."
+            )
         else:
             logger.exception("Erro ao excluir fornecedor ID=%d", id_alvo)
             print(f"❌ Ocorreu um erro ao tentar excluir o fornecedor: {e}")

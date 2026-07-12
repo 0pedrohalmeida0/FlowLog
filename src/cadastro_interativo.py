@@ -2,7 +2,6 @@ from database import Database
 from logging_config import get_logger
 from utils import formatar_cnpj, normalize_cnpj, validar_cnpj
 
-
 logger = get_logger(__name__)
 
 
@@ -30,9 +29,11 @@ def cadastrar_produto_interativo():
     # Coleta o alerta mínimo
     alerta_minimo = None
     while True:
-        resposta = input(
-            "Deseja configurar um alerta de estoque mínimo para este produto? (S/N): "
-        ).strip().upper()
+        resposta = (
+            input("Deseja configurar um alerta de estoque mínimo para este produto? (S/N): ")
+            .strip()
+            .upper()
+        )
         if resposta == "S":
             try:
                 alerta_minimo = int(input("Digite a quantidade mínima para alerta: "))
@@ -85,8 +86,12 @@ def cadastrar_produto_interativo():
                 (razao_social, cnpj_fornecedor),
             )
             fornecedor_id = cursor.lastrowid
-            logger.info("Fornecedor '%s' (CNPJ %s) cadastrado como ID=%d",
-                        razao_social, formatar_cnpj(cnpj_fornecedor), fornecedor_id)
+            logger.info(
+                "Fornecedor '%s' (CNPJ %s) cadastrado como ID=%d",
+                razao_social,
+                formatar_cnpj(cnpj_fornecedor),
+                fornecedor_id,
+            )
             print(f"✅ Fornecedor '{razao_social}' cadastrado com sucesso!")
 
         # 2. Insere o produto vinculado ao fornecedor
@@ -100,7 +105,12 @@ def cadastrar_produto_interativo():
 
         logger.info(
             "Produto '%s' cadastrado: id=%d qtd=%d preço=%.2f fornecedor_id=%d alerta_minimo=%s",
-            nome, produto_id, quantidade, preco, fornecedor_id, alerta_minimo,
+            nome,
+            produto_id,
+            quantidade,
+            preco,
+            fornecedor_id,
+            alerta_minimo,
         )
         print(f"\n✅ Sucesso! '{nome}' foi adicionado ao inventário.")
         print(f"   Fornecedor: {formatar_cnpj(cnpj_fornecedor)}")

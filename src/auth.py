@@ -11,8 +11,7 @@ O decorator @requer_nivel(N) protege uma função exigindo nível >= N.
 import logging
 from functools import wraps
 
-from session import nivel_atual, usuario_atual, logout
-
+from session import logout, nivel_atual, usuario_atual
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +29,7 @@ def requer_nivel(nivel_minimo):
         - Nível insuficiente: registra WARNING no log, imprime aviso, retorna None.
         - Nível suficiente: executa a função normalmente.
     """
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -45,7 +45,10 @@ def requer_nivel(nivel_minimo):
                 username = user.get("username", "?")
                 logger.warning(
                     "Acesso NEGADO: usuário '%s' (nível %d) tentou '%s' (requer nível %d)",
-                    username, nivel, func.__name__, nivel_minimo,
+                    username,
+                    nivel,
+                    func.__name__,
+                    nivel_minimo,
                 )
                 print(
                     f"⛔ Acesso Negado: Nível {nivel} insuficiente "
@@ -54,5 +57,7 @@ def requer_nivel(nivel_minimo):
                 return None
 
             return func(*args, **kwargs)
+
         return wrapper
+
     return decorator

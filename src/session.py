@@ -8,7 +8,6 @@ sessao_expirada/etc.) não muda.
 
 from datetime import datetime
 
-
 _sessao = {
     "usuario_id": None,
     "username": None,

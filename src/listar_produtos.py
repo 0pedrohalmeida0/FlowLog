@@ -1,7 +1,6 @@
 from database import Database
 from logging_config import get_logger
 
-
 logger = get_logger(__name__)
 
 
@@ -14,9 +13,7 @@ def listar_todos_produtos():
 
     try:
         cursor = conexao.cursor()
-        cursor.execute(
-            "SELECT id, nome, quantidade, preco_custo, data_entrada FROM produtos"
-        )
+        cursor.execute("SELECT id, nome, quantidade, preco_custo, data_entrada FROM produtos")
         resultados = cursor.fetchall()
         cursor.close()
 
@@ -62,8 +59,9 @@ def alerta_estoque_baixo():
                 nome, qtd, minimo = produto
                 print(f"⚠️ {nome}: Restam apenas {qtd} unidades! (Mínimo: {minimo})")
             print("!" * 40 + "\n")
-            logger.warning("Alerta de estoque crítico: %d produto(s) abaixo do mínimo",
-                           len(produtos_baixos))
+            logger.warning(
+                "Alerta de estoque crítico: %d produto(s) abaixo do mínimo", len(produtos_baixos)
+            )
     except Exception as e:
         logger.exception("Erro ao verificar alertas de estoque")
         print(f"Erro ao verificar alertas de estoque: {e}")
