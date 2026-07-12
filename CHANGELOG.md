@@ -12,6 +12,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).*
 
 ## [1.3.0] - 2026-07-12
 
+### Added (v1.3c — Backup + Sugestão de compra)
+- **`src/backup.py`** — backup, listagem e restauração do banco via `mysqldump` / `mysql` no PATH. Sub-menu no app (opção 12). Backups salvos em `./backups/` com nome timestamped, retenção automática dos últimos 30.
+- **Sugestão automática de compra** integrada ao alerta de estoque crítico. Para cada produto abaixo do mínimo, calcula `qtd_sugerida = max(alerta_minimo * 2 - quantidade_atual, 0)` (fórmula simples: repor até 2x o mínimo) e mostra nome do fornecedor. Aparece automaticamente no alerta do menu e na inicialização.
+- **Opção 12 no menu** — "Backup e Restauração" (nível 2). Sub-menu: [1] Fazer backup / [2] Listar / [3] Restaurar (com confirmação dupla via digitação de `RESTAURAR`).
+- `mysqldump` é chamado com `--single-transaction` (consistência sem lock), `--routines` e `--triggers` (preparação para v1.4+).
+
+### Notes (PT)
+- Backup manual via menu é o primeiro passo. Backup automático diário (cron-like) entra na v1.4 com a refatoração para `config.yaml`.
+- Restauração tem confirmação dupla (digitar `RESTAURAR`) por ser destrutiva — apaga todos os dados atuais antes de popular com o dump.
+
+### Notes (EN)
+- Manual backup via menu is the first step. Automatic daily backup (cron-like) lands in v1.4 along with the `config.yaml` refactor.
+- Restore has double confirmation (typing `RESTAURAR`) because it's destructive — it wipes all current data before populating from the dump.
+
 ### Added (v1.3b — CSV Import / Export)
 - **`src/csv_export.py`** — exporta inventário, histórico (filtrado por tipo) e Curva ABC para CSV. Padrão BR: encoding `utf-8-sig` (BOM, abre direto no Excel), separador `;`, decimais com vírgula, quebras de linha `\r\n`. Cada relatório pergunta ao final se o usuário quer exportar.
 - **`src/csv_import.py`** — importa produtos em massa a partir de CSV. Formato esperado: `nome,quantidade,preco_custo,fornecedor_cnpj,alerta_minimo` (cabeçalho obrigatório, `alerta_minimo` opcional). Aceita separador `;` ou `,` (auto-detecta) e decimais com `.` ou `,` (auto-converte). Valida CNPJ por linha; pula inválidas com aviso; confirma antes de inserir. Fornecedores inexistentes são cadastrados automaticamente.

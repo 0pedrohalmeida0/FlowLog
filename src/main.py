@@ -14,6 +14,7 @@ Comportamentos de sessão (v1.2):
 import os
 
 from auth import requer_nivel
+from backup import menu_backup
 from cadastrar_usuario import cadastrar_usuario
 from cadastro_interativo import cadastrar_produto_interativo
 from configurar_alerta import atualizar_alerta
@@ -86,6 +87,11 @@ def op_importar_csv():
     importar_produtos_csv()
 
 
+@requer_nivel(2)
+def op_backup():
+    menu_backup()
+
+
 # Tabela de opções do menu: chave -> (rótulo, handler)
 # Opções 1 e 5 não têm @requer_nivel (acessíveis a qualquer usuário logado).
 MENU_OPCOES = {
@@ -100,6 +106,7 @@ MENU_OPCOES = {
     "9": ("Relatório de Curva ABC (Giro de Estoque)", op_relatorio_curva),
     "10": ("Editar Produto", op_editar_produto),
     "11": ("Importar Produtos de CSV", op_importar_csv),
+    "12": ("Backup e Restauração", op_backup),
 }
 
 
