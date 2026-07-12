@@ -16,7 +16,10 @@ def cadastrar_usuario():
 
     # Loop até o usuário fornecer uma senha que passa na validação
     while True:
-        nova_senha = input("Digite a senha de acesso: ")
+        # ME-13: strip() na senha evita criação de senhas com whitespace
+        # acidental (ex: ' abc123 '). A validação de complexidade roda
+        # dentro do service, mas a normalização fica aqui.
+        nova_senha = input("Digite a senha de acesso: ").strip()
         if not nova_senha:
             print("❌ A senha não pode ser vazia.")
             continue

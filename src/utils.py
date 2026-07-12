@@ -16,19 +16,41 @@ logger = get_logger(__name__)
 
 
 def normalize_cnpj(cnpj):
-    """Remove caracteres não numéricos de um CNPJ para comparações."""
-    return re.sub(r"\D", "", str(cnpj) or "")
+    """Remove caracteres não numéricos de um CNPJ para comparações.
+
+    CR-07: aceita apenas dígitos ASCII 0-9. Dígitos Unicode
+    (árabe ٠١٢٣٤٥٦٧٨٩, etc) são rejeitados via str.isdigit().
+    """
+    if cnpj is None:
+        raise ValueError("CNPJ não pode ser None.")
+    s = str(cnpj)
+    # CR-07: filtra caracteres não-ASCII para evitar duplicação
+    # silenciosa entre "123" (ASCII) e "١٢٣" (Unicode).
+    # isdigit() aceita '٠'-'٩' (True), por isso usamos regex ASCII.
+    s = re.sub(r"[^0-9]", "", s)
+    if not s and cnpj:
+        raise ValueError(
+            f"CNPJ contém apenas caracteres não-ASCII: {cnpj!r}. " f"Use apenas dígitos 0-9."
+        )
+    return s
 
 
 def validar_cnpj(cnpj):
     """Valida um CNPJ pelos dígitos verificadores.
 
     Aceita CNPJ com ou sem máscara. Retorna True se válido, False caso contrário.
-    Rejeita sequências inválidas (00000000000000, 11111111111111, etc.).
+    Rejeita sequências inválidas (00000000000000, 11111111111111, etc.)
+    e CNPJs com dígitos não-ASCII (CR-07).
     """
-    cnpj = normalize_cnpj(cnpj)
+    # CR-07: rejeita CNPJ None ou só com chars não-ASCII
+    if cnpj is None or (isinstance(cnpj, str) and not cnpj.strip()):
+        return False
+    try:
+        cnpj = normalize_cnpj(cnpj)
+    except ValueError:
+        return False
 
-    if len(cnpj) != 14:
+    if not cnpj or len(cnpj) != 14:
         return False
 
     # Rejeita sequências de dígitos repetidos
@@ -76,14 +98,21 @@ MIN_SENHA_LEN = 6
 # (que devolve 32 bytes hex) para aceitar senhas arbitrariamente longas
 # mantendo bcrypt como fator de trabalho (work factor).
 # A mesma transformação é usada em hash e em verify.
-def _pre_normalizar_senha(senha_plana: str) -> bytes:
+def _pre_normalizar_senha(senha_plana) -> bytes:
     """Reduz a senha para 32 bytes (SHA-256 hex) antes de passar ao bcrypt.
 
     bcrypt opera com no máximo 72 bytes. Se a senha exceder, usamos
     SHA-256 como pré-normalização: o hash é determinístico, então o mesmo
     pré-processamento em hash_senha/verificar_senha dá match.
+
+    ME-11: aceita str ou bytes. str é codificado em UTF-8; bytes é
+    usado como está (assume que já está em UTF-8).
     """
-    return hashlib.sha256(senha_plana.encode("utf-8")).hexdigest().encode("ascii")
+    if isinstance(senha_plana, bytes):
+        data = senha_plana
+    else:
+        data = str(senha_plana).encode("utf-8")
+    return hashlib.sha256(data).hexdigest().encode("ascii")
 
 
 def hash_senha(senha_plana):
@@ -119,7 +148,14 @@ def verificar_senha(senha_plana, hash_armazenado):
             return False
 
     # Senha em texto puro (legado): recusa autenticar.
+    # ME-15: chamamos bcrypt.checkpw com um hash dummy para mitigar
+    # timing attack (não vaza se o hash é bcrypt ou plaintext pela
+    # diferença de tempo de resposta).
     logger.warning("Senha em texto puro detectada; usuário precisa ser recadastrado")
+    try:
+        bcrypt.checkpw(_pre_normalizar_senha(senha_plana), b"$2b$12$" + b"x" * 53)
+    except Exception:
+        pass
     return False
 
 
@@ -134,6 +170,16 @@ def validar_senha_complexidade(senha):
     Returns:
         (ok: bool, mensagem: str) — quando ok=False, mensagem explica o motivo.
     """
+    # ME-11: aceita apenas str. Se vier bytes, retorna erro
+    # (em vez de explodir com TypeError no re.search).
+    if isinstance(senha, bytes):
+        try:
+            senha = senha.decode("utf-8")
+        except UnicodeDecodeError:
+            return False, "Senha contém bytes inválidos."
+    if not isinstance(senha, str):
+        return False, "Senha deve ser uma string."
+
     if not senha:
         return False, "A senha não pode ser vazia."
 

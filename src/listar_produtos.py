@@ -33,6 +33,10 @@ def listar_todos_produtos():
         print(f"❌ Erro ao listar produtos: {e}")
         return
 
+    # ME-14: defensivo — em testes ou mocks, o service pode retornar
+    # None. Em produção, sempre retorna lista, mas custa nada checar.
+    if not produtos:
+        produtos = []
     total = len(produtos)
     if limite > 0 and total > limite:
         produtos_exibidos = produtos[:limite]

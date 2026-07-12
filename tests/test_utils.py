@@ -5,6 +5,7 @@ import pytest
 from utils import (
     formatar_cnpj,
     hash_senha,
+    normalize_cnpj,
     validar_cnpj,
     validar_senha_complexidade,
     verificar_senha,
@@ -27,6 +28,32 @@ class TestCNPJ:
     def test_cnpj_petrobras_valido(self):
         # CNPJ público da Petrobras, dígitos verificadores corretos
         assert validar_cnpj("33.000.167/0001-01") is True
+
+    def test_cnpj_digitos_arabicos_rejeitado_cr07(self):
+        """CR-07: CNPJ escrito com dígitos arábicos (Unicode) deve
+        ser rejeitado para evitar duplicação silenciosa.
+        """
+        # 33.000.167/0001-01 em arábico
+        cnpj_arabic = "٣٣٠٠٠١٦٧٠٠٠١٠١"
+        assert validar_cnpj(cnpj_arabic) is False
+        with pytest.raises(ValueError):
+            normalize_cnpj(cnpj_arabic)
+
+    def test_cnpj_misto_ascii_arabic_rejeitado_cr07(self):
+        """CR-07: mistura ASCII+árabe também rejeitada."""
+        # 13 dígitos ASCII + 1 arábico
+        cnpj_misto = "11.222.333/0001-8١"
+        assert validar_cnpj(cnpj_misto) is False
+
+    def test_cnpj_none_rejeitado_ba09(self):
+        """BA-09: CNPJ None deve levantar erro, não retornar string vazia."""
+        assert validar_cnpj(None) is False
+        with pytest.raises(ValueError):
+            normalize_cnpj(None)
+
+    def test_cnpj_string_vazia_rejeitado(self):
+        assert validar_cnpj("") is False
+        assert validar_cnpj("   ") is False
 
     def test_cnpj_bradesco_valido(self):
         assert validar_cnpj("60.746.948/0001-12") is True
@@ -130,6 +157,24 @@ class TestBcrypt:
         h = hash_senha(senha)
         assert verificar_senha(senha, h) is True
         assert verificar_senha(senha + "x", h) is False
+
+    def test_verificar_senha_bytes_nao_explode_me11(self):
+        """ME-11: passar bytes em vez de str não deve explodir
+        com TypeError; deve decodificar e validar."""
+        h = hash_senha("Abc123")
+        assert verificar_senha(b"Abc123", h) is True
+        assert verificar_senha(b"errada", h) is False
+
+    def test_validar_senha_complexidade_aceita_bytes_me11(self):
+        """ME-11: validar_senha_complexidade aceita bytes."""
+        ok, _ = validar_senha_complexidade(b"Abc123")
+        assert ok is True
+        ok, _ = validar_senha_complexidade(b"fraca")
+        assert ok is False
+        # Não-str nem bytes
+        ok, msg = validar_senha_complexidade(123)
+        assert ok is False
+        assert "string" in msg.lower()
 
 
 # ============================================================

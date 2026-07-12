@@ -8,9 +8,31 @@ logger = get_logger(__name__)
 
 
 # Mapeamento de opção do menu para (chave, rótulo, função de cast).
+# ME-12: usa a mesma lógica de parse_decimal do csv_import para
+# aceitar tanto '10.50' quanto '10,50' quanto '1.234,56' (BR completo).
+def _parse_preco(s: str) -> float:
+    """ME-12: parse de preço consistente com csv_import.
+
+    Aceita:
+        - '10.50' (formato EN)
+        - '10,50' (formato BR simples)
+        - '1.234,56' (formato BR com milhar)
+    Rejeita qualquer outro formato com ValueError.
+    """
+    s = s.strip()
+    if not s:
+        raise ValueError("valor vazio")
+    if "," in s and s.count(",") == 1 and "." not in s:
+        s = s.replace(",", ".")
+    elif "," in s and "." in s:
+        # Formato BR: 1.234,56 -> remove pontos de milhar, troca vírgula
+        s = s.replace(".", "").replace(",", ".")
+    return float(s)
+
+
 _OPCOES = {
     "1": ("nome", "Nome", str),
-    "2": ("preco_custo", "Preço de custo (R$)", lambda s: float(s.replace(",", "."))),
+    "2": ("preco_custo", "Preço de custo (R$)", _parse_preco),
     "3": (
         "alerta_minimo",
         "Alerta mínimo (vazio = sem alerta)",

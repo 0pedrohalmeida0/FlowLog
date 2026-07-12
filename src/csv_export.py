@@ -23,6 +23,22 @@ from relatorio_curva import _SQL_CURVA_ABC
 logger = get_logger(__name__)
 
 
+# CR-08: paridade com AL-03 (csv_import._csv_safe). O import sanitiza
+# nomes, mas um produto cadastrado direto pela interface pode ter nome
+# começando com =, +, -, @. Quando exportado pra CSV, o Excel/Sheets
+# interpreta como fórmula e pode executar. Sanitizamos também no export.
+def _csv_safe(s):
+    """CR-08: neutraliza CSV injection (CVE-2014-3524) no export.
+
+    Se o valor começar com =, +, -, @, TAB ou CR, prefixa com `'`
+    para que o Excel/Sheets não interprete como fórmula.
+    """
+    s = str(s) if s is not None else ""
+    if s and s[0] in ("=", "+", "-", "@", "\t", "\r"):
+        s = "'" + s
+    return s
+
+
 # Defaults BR: utf-8-sig + ; + , + \r\n
 _CSV_DEFAULTS = {
     "encoding": "utf-8-sig",
@@ -82,7 +98,8 @@ def exportar_inventario(cursor):
     for pid, nome, qtd, preco, fornecedor in cursor.fetchall():
         # Formata decimal no padrão BR
         preco_str = f"{float(preco):.2f}".replace(".", ",")
-        rows.append([pid, nome, qtd, preco_str, fornecedor])
+        # CR-08: sanitiza campos de texto contra CSV injection
+        rows.append([pid, _csv_safe(nome), qtd, preco_str, _csv_safe(fornecedor)])
 
     caminho = _ask_path("inventario")
     _escrever_csv(caminho, headers, rows)
@@ -117,14 +134,15 @@ def exportar_historico(cursor, tipo_filtro=None):
     cursor.execute(sql, params)
     rows = []
     for hid, data, tipo, produto, qtd, usuario in cursor.fetchall():
+        # CR-08: sanitiza campos de texto
         rows.append(
             [
                 hid,
                 data.strftime("%Y-%m-%d %H:%M:%S"),
                 tipo,
-                produto,
+                _csv_safe(produto),
                 qtd,
-                usuario,
+                _csv_safe(usuario),
             ]
         )
 
@@ -151,10 +169,11 @@ def exportar_curva_abc(cursor):
     cursor.execute(_SQL_CURVA_ABC)
     rows = []
     for nome, total, pct, pct_acum, classe in cursor.fetchall():
+        # CR-08: sanitiza o nome contra CSV injection
         rows.append(
             [
                 classe,
-                nome,
+                _csv_safe(nome),
                 total,
                 f"{float(pct):.2f}".replace(".", ","),
                 f"{float(pct_acum):.2f}".replace(".", ","),

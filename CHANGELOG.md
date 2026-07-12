@@ -10,6 +10,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/).*
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-07-12
+
+### Security (v1.4d — segundo QA pass: bugs latentes)
+- **CR-07** CNPJ com dígitos Unicode (árabe ٠-٩, etc.) **rejeitado**.
+  Antes: `normalize_cnpj("٣٣٠٠٠١٦٧٠٠٠١٠١")` retornava uma string
+  de dígitos arábicos diferente da versão ASCII, levando a
+  **duplicação silenciosa de fornecedor** (o UNIQUE constraint
+  do banco não detectava). Agora: `validar_cnpj` retorna False
+  e `normalize_cnpj` levanta `ValueError` quando o input tem
+  apenas caracteres não-ASCII.
+- **CR-08** **CSV export** agora sanitiza contra CVE-2014-3524
+  (paridade com AL-03 do import). Produtos cadastrados direto
+  pela interface (não via CSV) com nome começando em `=`, `+`,
+  `-`, `@`, TAB ou CR são prefixados com `'` no export.
+
+### Fixed (v1.4d)
+- **ME-11** `validar_senha_complexidade` aceita `bytes` e `int`
+  sem explodir com `TypeError`. Decodifica bytes em UTF-8 e
+  rejeita outros tipos.
+- **ME-12** `editar_produto` agora usa a mesma função
+  `_parse_preco` do csv_import, aceitando "10,50", "10.50" e
+  "1.234,56" (formato BR completo). Antes: "1.234,56" virava
+  "1.234" (perdia precisão).
+- **ME-13** `cadastrar_usuario` agora aplica `.strip()` na
+  senha antes de criar. Antes: "  abc123  " criava senha com
+  whitespace.
+- **ME-14** `listar_produtos` agora trata defensivamente caso
+  `service.listar_todos()` retorne `None` (em testes/mocks).
+- **ME-15** `verificar_senha` agora chama `bcrypt.checkpw` com
+  hash dummy quando o hash é texto puro (mitigação teórica
+  de timing attack que poderia vazar o tipo de hash).
+- **BA-09** `normalize_cnpj(None)` agora levanta `ValueError`
+  em vez de retornar string vazia silenciosamente.
+
+### Added (v1.4d)
+- 18 testes novos (total 138, cobertura 82%):
+  - `tests/test_utils.py` — 4 testes (CR-07 CNPJ Unicode, ME-11
+    bytes, BA-09 None, validação).
+  - `tests/test_csv.py` — novo arquivo, 9 testes (CR-08
+    sanitização no export).
+- `_csv_safe` em `csv_export.py` (paridade com import).
+- `_parse_preco` em `editar_produto.py` (paridade com import).
+
 ## [1.4.1] - 2026-07-12
 
 ### Security (v1.4c — QA patch: correções críticas)
