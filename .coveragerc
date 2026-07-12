@@ -1,0 +1,37 @@
+# Coverage config — espelha a seção [tool.coverage] do pyproject.toml.
+# Existe como arquivo separado (e não inline no pyproject.toml) para
+# ser robusto quando o pytest roda de fora do diretório do projeto.
+
+[run]
+source = src
+omit =
+    */teste_insercao.py
+    # Módulos DB-dependent: testados manualmente ou em suite de integração
+    # (fora do escopo de CI sem MySQL).
+    */database.py
+    */login.py
+    */main.py
+    */cadastrar_usuario.py
+    */cadastro_interativo.py
+    */listar_produtos.py
+    */entrada.py
+    */saida_estoque.py
+    */ver_historico.py
+    */gerenciar_fornecedor.py
+    */editar_fornecedor.py
+    */excluir_fornecedor.py
+    */configurar_alerta.py
+    */relatorio_curva.py
+    */csv_export.py
+    */csv_import.py
+    */backup.py
+    */editar_produto.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__\.\:
+    raise NotImplementedError
+show_missing = true
+precision = 1
+fail_under = 70

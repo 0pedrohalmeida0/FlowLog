@@ -10,6 +10,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/).*
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-07-12
+
+### Added (v1.4a — Repository pattern + exception hierarchy)
+- **`src/exceptions.py`** — hierarquia de exceções do domínio: `FlowLogError` (base) + `ValidationError`, `NotFoundError`, `BusinessRuleError`, `AuthenticationError`, `AuthorizationError`, `DatabaseError`, `InfrastructureError` + especializadas (`EstoqueInsuficienteError`, `ContaBloqueadaError`, `CNPJInvalidoError`). Feature modules vão passar a levantar estas exceções em vez de imprimir mensagens de erro.
+- **`src/repositories/`** — camada de acesso a dados por entidade:
+  - `BaseRepository` com `transaction()` context manager e `_connect()`.
+  - `ProdutoRepository` — listar/buscar/criar/atualizar/listar_abaixo_do_minimo.
+  - `FornecedorRepository` — buscar_por_cnpj/criar/excluir.
+  - `UsuarioRepository` — split entre `buscar_para_auth` (com hash) e `buscar_por_username` (sem hash, para listagens).
+  - `HistoricoRepository` — listar (com filtro de tipo) + `inserir()` que recebe cursor do chamador.
+  - `LogEdicoesRepository` — registrar snapshot + listar por produto.
+  - Convenção: SQL vive só aqui. Feature modules viram finos (orquestração, não SQL).
+- **`tests/test_exceptions.py`** (10 testes) — hierarquia das exceções + propagação de mensagens.
+- **`tests/test_repositories.py`** (16 testes) — SQL gerado pelos repositories via mock, sem precisar de MySQL real. Pega bugs como "UPDATE sem WHERE" ou "campo renomeado e ninguém percebeu".
+- **`.coveragerc`** — arquivo separado (e não inline no pyproject.toml) pra ser robusto quando pytest roda de fora do diretório do projeto. `fail_under=70` no CI.
+- **CI** (`ci.yml`) — atualizado pra usar `--cov-config=.coveragerc` e `fail_under=70`.
+
+### Notes (PT)
+Esta release é a **fundação** da v1.4: o SQL foi todo pra um lugar só e os feature modules ainda não foram migrados pra usar os repositories. Próximos commits (v1.4b) vão refatorar `login.py`, `entrada.py`, `saida_estoque.py` e amigos pra chamar repositories + services em vez de montar SQL diretamente. A UI/UX **não muda** — o usuário continua interagindo da mesma forma.
+
+### Notes (EN)
+This release is the **foundation** of v1.4: all SQL is now in one place, but feature modules haven't been migrated yet to use the repositories. Next commits (v1.4b) will refactor `login.py`, `entrada.py`, `saida_estoque.py` etc. to call repositories + services instead of assembling SQL directly. The UI/UX **does not change** — users keep interacting the same way.
+
 ## [1.3.0] - 2026-07-12
 
 ### Added (v1.3c — Backup + Sugestão de compra)
