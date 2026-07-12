@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).*
 ## [Unreleased]
 
 ### Estratégia (v1.5+ — virada de negócio)
+- **Diferenciais exclusivos por SKU** documentados no `ROADMAP.md`. Regra: feature core de gestão vai pra ambos; exclusivos da Licença são baseados em restrições do on-premise (offline, hardware local, dados locais, customização); exclusivos do Cloud são baseados em restrições do SaaS (mobile, IA, integrações web, auto-update).
 - **2 SKUs definidos** (refinamento — era 3, agora consolida):
   - **FlowLog Licença** — software on-premise, instalável Windows/Linux, com **todas as features premium embutidas** (multi-filial, API REST local, LDAP, audit, dashboard, white-label). One-time ou anual.
   - **FlowLog Cloud** — SaaS web, multi-tenant, billing recorrente (Free / Pro / Business). Mensal.

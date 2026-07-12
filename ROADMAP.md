@@ -34,6 +34,52 @@ A ordem de execução é: **Licença → Cloud**. Cada um destrava o próximo.
 
 ---
 
+## 🎯 Diferenciais exclusivos por SKU (princípio estratégico)
+
+**Regra de ouro:** NÃO competir por feature. Cada SKU vence onde a natureza do outro é fraca. Tudo que é feature core de gestão (multi-filial, audit, dashboard, etc) tem que estar em **ambos**. O que diferencia é o que cada um tem de **exclusivo** baseado em restrições técnicas reais do modelo de deployment.
+
+### 🏢 FlowLog Licença — exclusivos (que Cloud **não consegue copiar**)
+
+Estes são os argumentos de venda da Licença. Cloud pode ter features equivalentes via bridge ou API terceira, mas não tem a **mesma experiência nativa**.
+
+1. **Funciona offline / sem internet** — Galpão, indústria, agronegócio, lojas em zona rural. Sincroniza quando volta online. Cloud não tem como.
+2. **Dados nunca saem da empresa** — Compliance pesado: saúde, financeiro, governo, defesa. LGPD nível paranoico. Atende requisitos de auditoria que exigem dados on-premise.
+3. **Integração direta com hardware local** — Impressora fiscal (ECF/SAT), balança, leitor de código de barras USB/serial. Cloud precisaria de bridge local (vira gambiarra).
+4. **NFe com certificado A1 instalado localmente** — Assina direto, sem intermediário. Cloud precisa de API terceira (custo + latência).
+5. **Customização do código-fonte** — Tier premium "Source-Available" vende com código + suporte de integração. Cliente com time de dev interno adapta às regras dele.
+6. **Plugin local em Python** — Cliente escreve extensão que roda no próprio servidor. Cloud não consegue sandboxar igual.
+7. **Volume ilimitado** — Sem tier que limite usuários/produtos/API calls. Cliente mega não paga por seat.
+8. **Air-gapped backup** — Backup em disco externo sem rede. Anti-ransomware de verdade.
+9. **Conector nativo a SQL Server / Oracle / SAP / TOTVS** — DLL/ODBC no servidor do cliente. Cloud precisaria de replicação.
+10. **Regras de negócio customizáveis** — Script Python/Jinja que roda on-premise, sem restrição de tenancy.
+
+### ☁️ FlowLog Cloud — exclusivos (que Licença **não tem**)
+
+Estes são os argumentos de venda do Cloud. Licença pode ter equivalentes (ex: e-mail via SMTP local), mas exige configuração e manutenção do cliente.
+
+1. **Zero instalação** — Browser, sem deploy, sem MySQL local, sem admin de infra.
+2. **Update automático** — Sem "espera o Pedro atualizar o .exe". Sempre na última versão.
+3. **Mobile / PWA** — Acessar do celular do gerente, push notification, offline read-only.
+4. **Integrações web modernas** — Zapier, Make, Slack, Notion, Google Sheets, NFe.io.
+5. **E-mail/SMS/push já configurado** — Sem SMTP, sem Twilio, sem dor.
+6. **Self-service signup** — Sem processo comercial, 14 dias trial, cartão opcional.
+7. **White-label completo pra revenda** — Subdomínio (`estoque.empresa.com.br`), logo, cores. Vende pra franquia de software.
+8. **IA embutida** — Previsão de demanda, detecção de anomalia, chatbot (precisa de volume de dados centralizado).
+9. **Colaboração real-time** — Vários usuários editando o mesmo dado ao mesmo tempo.
+10. **Painel admin nosso (SaaS owner)** — MRR, churn, tenants ativos, suporte self-service.
+11. **Marketplace de extensões** — Outros devs vendem plugins/integrations na nossa plataforma.
+
+### 📊 Decisão: feature vai pra qual SKU?
+
+Quando aparecer uma feature nova no roadmap, a pergunta é:
+
+- **Funcionalidade core de gestão** (ex: nova coluna em `produtos`, novo relatório)? → Vai pra **ambos**, mesma feature, posicionada igual.
+- **Feature que depende de acesso a hardware local** (ex: SAT fiscal, balança)? → **Só Licença**. Cloud não consegue.
+- **Feature que precisa de volume de dados / IA / integração web moderna** (ex: previsão, chatbot)? → **Só Cloud**. Licença não tem volume nem se atualiza rápido.
+- **Feature que é "nice to have" e fácil**? → Cloud primeiro (atualiza automático), depois Licença (vira tier da próxima minor).
+
+---
+
 ## 🛣️ v1.5 — FlowLog Licença (4-6 semanas) 📦
 
 **Tema:** empacotar tudo o que já existe num instalador Windows vendável. A Licença é a porta de entrada do mercado e financia o desenvolvimento do Cloud.
