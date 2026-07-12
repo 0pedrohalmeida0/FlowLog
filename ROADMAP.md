@@ -3,7 +3,7 @@
 > Planejamento vivo do projeto. Atualizado conforme versões saem e o contexto muda.
 > *Living planning document. Updated as versions ship and context evolves.*
 
-> **Atualizado em 2026-07-12: virada estratégica para 3 SKUs** (Licença, Enterprise, Cloud).
+> **Atualizado em 2026-07-12: virada estratégica para 2 SKUs** (Licença + Cloud).
 
 ---
 
@@ -19,23 +19,24 @@ A base está sólida. O código atual reaproveita ~80% do que virá nos próximo
 
 ---
 
-## 🏢 A nova estratégia: 3 SKUs
+## 🏢 A estratégia: 2 SKUs
 
-A partir de agora, o FlowLog deixa de ser "um software instalável" e vira uma **família de produtos** com 3 pontos de entrada no mercado:
+A partir de agora, o FlowLog tem **dois produtos** com posicionamento claro:
 
 | SKU | Tipo | Onde roda | Quem opera | Modelo de receita |
 |-----|------|-----------|------------|-------------------|
-| **FlowLog Licença** | Software | Cliente (Windows) | Cliente | One-time ou anual |
-| **FlowLog Enterprise** | Software + | Cliente (Windows/Linux) | Cliente | Anual (premium) |
-| **FlowLog Cloud** | SaaS | Servidor (nós) | Nós | Mensal (recorrente) |
+| **FlowLog Licença** | Software instalável (com features premium) | Cliente (Windows/Linux) | Cliente | One-time ou anual |
+| **FlowLog Cloud** | SaaS web | Servidor (nós) | Nós | Mensal recorrente |
 
-A ordem de execução é: **Licença → Enterprise → Cloud**. Cada SKU destrava o próximo em complexidade e em capacidade de receita recorrente.
+**A Licença já inclui o que seria "Enterprise"** — multi-filial, API REST local, LDAP, audit log, dashboard, white-label. Não tem SKU intermediária. Quem quer on-premise, compra a Licença e tem tudo.
+
+A ordem de execução é: **Licença → Cloud**. Cada um destrava o próximo.
 
 ---
 
-## 🛣️ v1.5 — FlowLog Licença GA (4-6 semanas) 📦
+## 🛣️ v1.5 — FlowLog Licença (4-6 semanas) 📦
 
-**Tema:** empacotar tudo o que já existe num instalador Windows vendável. O software local é a porta de entrada do mercado e o que financia o desenvolvimento do Cloud.
+**Tema:** empacotar tudo o que já existe num instalador Windows vendável. A Licença é a porta de entrada do mercado e financia o desenvolvimento do Cloud.
 
 ### O que entra
 
@@ -65,18 +66,11 @@ A ordem de execução é: **Licença → Enterprise → Cloud**. Cada SKU destra
 
 🟠 **Médio.** PyInstaller é cheio de pegadinha (paths, hidden imports do `mysql-connector`). Inno Setup tem curva. Auto-update em desktop é frágil. Mas a base é Python, não tem nada de nativo — mitigável.
 
-### Features por SKU (este release é só Licença)
-
-- ✅ Tudo da v1.4 (cadastro, estoque, histórico, Curva ABC, CSV, backup)
-- ❌ Multi-filial (Enterprise)
-- ❌ API REST (Enterprise)
-- ❌ Web (Cloud)
-
 ---
 
-## 🏢 v1.6 — FlowLog Enterprise Beta (4-6 semanas) 🏗️
+## 🏗️ v1.6 — FlowLog Licença + Premium (4-6 semanas) 💎
 
-**Tema:** a mesma base de código da Licença, mas com **features premium** que justificam o ticket anual maior. On-premise, mas com esteroides.
+**Tema:** adicionar as **features premium** à Licença. A mesma base de código da v1.5, mas com multi-filial, API REST local, LDAP e audit log. Quem compra a Licença recebe tudo — não tem "Licença básica" e "Licença premium" como SKUs separados. É a mesma coisa.
 
 ### O que entra
 
@@ -88,11 +82,11 @@ A ordem de execução é: **Licença → Enterprise → Cloud**. Cada SKU destra
 - **Dashboard de métricas web** (`/admin/metrics`) — Chart.js com: produtos mais vendidos, evolução de estoque, alertas críticos por mês, top fornecedores.
 - **Relatórios premium** — projeção de compra (MRP simplificado), DRE por filial, fluxo de caixa, aging de estoque.
 - **White-label** — logo, cores e nome do cliente no relatório exportado.
-- **Suporte dedicado** (comercial, fora do software) — SLA 24h, canal direto.
+- **Suporte dedicado** (comercial, fora do software) — SLA 24h, canal direto, telefone.
 
 ### Por que segundo
 
-A v1.5 prova que o produto funciona. A v1.6 faz ele falar com sistemas legados (ERP, BI) que o cliente B2B já tem. Quem tem ERP, paga mais — esse é o segmento que paga anual. A receita recorrente começa aqui (anual, não mensal ainda).
+A v1.5 prova que o produto funciona. A v1.6 faz ele falar com sistemas legados (ERP, BI) que o cliente B2B já tem. Quem tem ERP, paga mais. Receita recorrente começa aqui (anual).
 
 ### Critério de pronto
 
@@ -106,12 +100,6 @@ A v1.5 prova que o produto funciona. A v1.6 faz ele falar com sistemas legados (
 ### Risco
 
 🔴 **Alto.** Mudança de schema é migração pesada. Multi-tenant exige refactor de TODA query existente (acrescentar `WHERE empresa_id = X` em todos os SELECTs). RBAC granular é fácil de fazer errado. API local exige cuidado com autenticação e rate limit.
-
-### Features por SKU
-
-- ✅ Tudo da Licença
-- ➕ Multi-filial, RBAC por empresa, API REST local, LDAP, audit log avançado, dashboard, white-label
-- ❌ Web (Cloud)
 
 ---
 
@@ -159,17 +147,17 @@ A v1.5 prova que o produto funciona. A v1.6 faz ele falar com sistemas legados (
 - **Infra**: Docker → Fly.io ou Render → Cloudflare CDN
 - **Observabilidade**: Sentry (errors) + PostHog (product analytics) + Grafana Cloud (metrics)
 
-### Features por SKU
+### Features no Cloud MVP
 
-- ✅ Tudo da Enterprise
-- ➕ Web, multi-tenant, billing recorrente, signup self-service, e-mail transacional
-- 🆕 Plano Free (vai competir com a Licença em funcionalidade, mas é web)
+- ✅ Tudo da Licença v1.6 (multi-filial, API, LDAP, audit, dashboard, white-label)
+- ➕ Web, multi-tenant real, billing recorrente, signup self-service, e-mail transacional
+- 🆕 Plano Free (vai competir com a Licença em funcionalidade, mas é web e tem 14 dias trial)
 
 ---
 
 ## 🚀 v2.1 — FlowLog Cloud GA (4-6 semanas) 🎯
 
-**Tema:** tirar o "beta" do Cloud. Polimento, integrações que vendem, e a primeira campanha de marketing.
+**Tema:** tirar o "MVP" do Cloud. Polimento, integrações que vendem, e a primeira campanha de marketing.
 
 ### O que entra
 
@@ -180,7 +168,7 @@ A v1.5 prova que o produto funciona. A v1.6 faz ele falar com sistemas legados (
 - **Campos customizados por tenant** — admin pode criar colunas extras em `produtos` (ex: `ncm`, `peso_kg`, `localizacao_fisica`).
 - **Importação avançada** — Excel (.xlsx), CSV, integração direta com NFe.
 - **Marketing site** — `flowlog.app` com landing page, pricing, calculadora de ROI, blog, depoimentos.
-- **Self-host opcional (Enterprise+)** — "quero Cloud, mas na minha infra" — vendemos o stack Docker.
+- **Self-host opcional** — "quero Cloud, mas na minha infra" — vendemos o stack Docker da Licença v1.6 com um instalador de tenant único.
 
 ### Por que quarto
 
@@ -208,7 +196,7 @@ Depois que o MVP tá rodando com 10-50 clientes, a gente sabe o que falta. As in
 
 - **Previsão de demanda** — Prophet ou ARIMA, rodando nos dados do tenant. "Vai precisar comprar 50 unidades do SKU X em 12 dias."
 - **Detecção de anomalia** — "esse produto teve 3 saídas anormais essa semana, pode estar com problema de qualidade."
-- **Compra automática (opcional)** — emite pedido de compra no ERP quando estoque <= ponto de pedido (Enterprise+Cloud).
+- **Compra automática (opcional)** — emite pedido de compra no ERP quando estoque <= ponto de pedido (Cloud Pro+).
 - **Chatbot de consulta** — "quantas unidades do mouse sem fio tem em estoque?" via WhatsApp ou webchat (Cloud).
 - **Insights diários** — resumo diário por e-mail/Slack ("3 produtos entraram em alerta, 2 fornecedores com lead time estourado, sugestão de compra X").
 - **Recomendação de pricing** — "você vende teclado mecânico a R$150, similar no mercado é R$130-170, considere R$145" (Cloud Pro+).
@@ -234,8 +222,8 @@ IA exige volume de dados. Só faz sentido depois de ter N clientes com N meses d
 
 | Versão | SKU | Tema | Duração | Risco | Receita |
 |--------|-----|------|---------|-------|---------|
-| v1.5 | Licença | Empacotamento + venda local | 4-6 sem | 🟠 | One-time |
-| v1.6 | Enterprise | Multi-filial + API + audit | 4-6 sem | 🔴 | Anual |
+| v1.5 | Licença | Empacotamento + setup wizard | 4-6 sem | 🟠 | One-time |
+| v1.6 | Licença + | Multi-filial + API + audit + LDAP | 4-6 sem | 🔴 | Anual |
 | v2.0 | Cloud MVP | Web + multi-tenant + billing | 8-12 sem | 🔴🔴 | Mensal |
 | v2.1 | Cloud GA | Integrações + PWA + marketing | 4-6 sem | 🟠 | Mensal+ |
 | v3.0 | IA | Previsão + automação | 6-8 sem | 🟠 | Upsell |
@@ -249,9 +237,9 @@ IA exige volume de dados. Só faz sentido depois de ter N clientes com N meses d
 ```
 v1.4d (atual) 
    ↓
-v1.5 Licença GA  →  primeira receita (vendas pontuais)
+v1.5 Licença MVP  →  primeira receita (vendas pontuais)
    ↓
-v1.6 Enterprise   →  receita anual (clientes B2B)
+v1.6 Licença + Premium  →  receita anual (clientes B2B, multi-filial)
    ↓
 v2.0 Cloud MVP    →  receita recorrente (SaaS)
    ↓
@@ -264,16 +252,16 @@ v3.0 IA           →  diferenciação + upsell
 
 Se houver fôlego (dev júnior + dev sênior), dá pra paralelizar:
 
-- **Time A (sênior)**: v1.5 (empacotamento) → v1.6 (Enterprise)
+- **Time A (sênior)**: v1.5 → v1.6 (Licença completa)
 - **Time B (júnior + mentoria)**: prototipar Cloud em paralelo, validar stack
 
-O risco de paralelizar é divergência de schema entre Licença e Cloud. Mitigação: **definir contrato da API primeiro** (v1.6 Enterprise), e o Cloud implementa o mesmo contrato. Quando migrar, é só trocar a UI.
+O risco de paralelizar é divergência de schema entre Licença e Cloud. Mitigação: **definir contrato da API primeiro** (v1.6), e o Cloud implementa o mesmo contrato. Quando migrar, é só trocar a UI.
 
 ---
 
 ## 🤔 Decisões pendentes (precisam de resposta)
 
-1. **Pricing** — quanto cobrar por SKU/tier? (impacta diretamente o roadmap de features premium vs. core)
+1. **Pricing** — quanto cobrar pela Licença (one-time ou anual) e pelos tiers do Cloud? (impacta diretamente o roadmap de features premium vs. core)
 2. **Jurídico** — qual o CNPJ, regime tributário, modelo de contrato (assinatura digital)?
 3. **Nome de domínio** — `flowlog.app` está disponível? (decide se é .com.br, .app, .com)
 4. **Hospedagem Cloud inicial** — Fly.io vs Render vs DigitalOcean vs Hetzner (impacta custo e região)
@@ -287,11 +275,11 @@ O risco de paralelizar é divergência de schema entre Licença e Cloud. Mitiga�
 
 - **Reaproveitar > Reescrever**: 80% do código v1.4d vira Cloud MVP.
 - **Vender antes de terminar**: v1.5 deve poder ser vendido HOJE, mesmo que o Cloud não exista.
-- **Receita diversificada**: Licença (pontual) + Enterprise (anual) + Cloud (mensal) reduz risco.
+- **Receita diversificada**: Licença (pontual ou anual) + Cloud (mensal) reduz risco.
 - **B2B primeiro, B2C depois**: pequenas e médias empresas têm LTV maior e churn menor que usuário individual.
-- **Self-host opcional no futuro**: Enterprise que quiser virar Cloud particular, vendemos o stack Docker.
+- **Self-host opcional no futuro**: v2.1 vende o stack Docker da Licença pra quem quer Cloud na própria infra.
 
 ---
 
-*Última atualização: 2026-07-12 (virada estratégica para 3 SKUs).*
+*Última atualização: 2026-07-12 (virada estratégica para 2 SKUs — Licença + Cloud).*
 *Próxima revisão: ao fim da v1.5.*
