@@ -1,47 +1,53 @@
-from utils import registrar_log
 from database import Database
+from utils import registrar_log
+
 
 def registrar_saida():
-    db = Database()
-    conexao = db.connect()
-    
-    if conexao:
+    """Registra uma saída de estoque com transação atômica.
+
+    Trava a linha do produto com SELECT ... FOR UPDATE antes de subtrair,
+    evitando race condition em saídas concorrentes. UPDATE e INSERT no
+    histórico rodam na mesma transação.
+    """
+    with Database().transaction() as (conn, cursor):
         try:
-            cursor = conexao.cursor()
-            
-            # 1. Identificamos o produto e a quantidade de saída
             id_produto = int(input("Digite o ID do produto que está saindo: "))
             quantidade_saida = int(input("Quantidade para retirar do estoque: "))
-            
-            # 2. Primeiro, verificamos se o produto existe e se tem estoque suficiente
-            cursor.execute("SELECT nome, quantidade FROM produtos WHERE id = %s", (id_produto,))
-            produto = cursor.fetchone()
-            
-            if produto:
-                nome_atual, qtd_atual = produto
-                
-                if qtd_atual >= quantidade_saida:
-                    # 3. Fazemos a subtração (UPDATE)
-                    nova_qtd = qtd_atual - quantidade_saida
-                    sql = "UPDATE produtos SET quantidade = %s WHERE id = %s"
-                    cursor.execute(sql, (nova_qtd, id_produto))
-                    
-                    conexao.commit()
-                    registrar_log(id_produto, 'SAIDA', quantidade_saida)
-                    print("📜 Movimentação registrada no histórico.")
-                    print(f"\n✅ Saída registrada! {nome_atual}: {qtd_atual} -> {nova_qtd}")
-                else:
-                    print(f"\n⚠️ Estoque insuficiente! Saldo atual: {qtd_atual}")
-            else:
-                print("\n❌ Produto não encontrado.")
-            
-            cursor.close()
-            conexao.close()
-            
         except ValueError:
             print("❌ Erro: Digite apenas números inteiros para ID e Quantidade.")
-        except Exception as e:
-            print(f"❌ Erro na operação: {e}")
+            return
+
+        if quantidade_saida <= 0:
+            print("❌ Erro: a quantidade de saída deve ser maior que zero.")
+            return
+
+        cursor.execute(
+            "SELECT nome, quantidade FROM produtos WHERE id = %s FOR UPDATE",
+            (id_produto,),
+        )
+        produto = cursor.fetchone()
+
+        if not produto:
+            print("\n❌ Produto não encontrado.")
+            return
+
+        nome_atual, qtd_atual = produto
+
+        if qtd_atual < quantidade_saida:
+            print(f"\n⚠️ Estoque insuficiente! Saldo atual: {qtd_atual}")
+            return
+
+        nova_qtd = qtd_atual - quantidade_saida
+        cursor.execute(
+            "UPDATE produtos SET quantidade = %s WHERE id = %s",
+            (nova_qtd, id_produto),
+        )
+
+        registrar_log(cursor, id_produto, 'SAIDA', quantidade_saida)
+
+        print("📜 Movimentação registrada no histórico.")
+        print(f"\n✅ Saída registrada! {nome_atual}: {qtd_atual} -> {nova_qtd}")
+
 
 if __name__ == "__main__":
     registrar_saida()
