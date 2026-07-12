@@ -12,6 +12,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/).*
 
 ## [1.4.0] - 2026-07-12
 
+### Added (v1.4b — Services + refactor dos feature modules)
+- **`src/services/`** — camada de business logic que orquestra repositories:
+  - `AuthService` — autenticação + lockout, lê `LOCKOUT_MAX_ATTEMPTS`/`LOCKOUT_DURATION_MINUTES` do .env.
+  - `EstoqueService` — `registrar_entrada`/`registrar_saida` com transação atômica, `SELECT ... FOR UPDATE` e `usuario_id` da sessão.
+  - `ProdutoService` — `cadastrar` (resolve fornecedor) e `editar` (whitelist de campos + snapshot JSON).
+  - `FornecedorService` — `cadastrar`/`editar_razao_social`/`excluir` com validação de CNPJ.
+  - `HistoricoService` — listagem com filtro de tipo.
+- **Feature modules refatorados** (viram finos, só I/O de terminal):
+  - `login.py` delega 100% pra `AuthService`, captura `ContaBloqueadaError`/`AuthenticationError`/`ValidationError` e traduz em mensagem amigável.
+  - `entrada.py` e `saida_estoque.py` delegam pra `EstoqueService`, capturam `NotFoundError`/`EstoqueInsuficienteError`/`ValidationError`.
+  - `cadastro_interativo.py` delega pra `ProdutoService.cadastrar`, captura `CNPJInvalidoError`/`ValidationError`.
+  - `editar_produto.py` delega pra `ProdutoService.editar`, captura `NotFoundError`/`ValidationError`.
+- **Padrão de exceções em uso**: feature modules nunca mais levantam `print()` de erro; levantam exceções do `src/exceptions.py` e o caller (CLI) traduz pra mensagem.
+- **`tests/test_services.py`** (32 testes) — Auth/Estoque/Produto/Fornecedor com mocks de repository. Verifica exceções em casos de borda (CNPJ inválido, estoque insuficiente, campo vazio, ID inexistente, tentativa de editar quantidade).
+
+### Notes (PT)
+- Feature modules restantes (ver_historico, relatorio_curva, csv_export, csv_import, backup, listar_produtos, configurar_alerta, editar_fornecedor, excluir_fornecedor, gerenciar_fornecedor) **ainda usam SQL direto**. Migração completa fica pra v1.4c ou depois — a base está pronta e a migração é mecânica (substituir SQL inline por chamada de repository).
+- UI/UX **não muda** — o usuário continua interagindo da mesma forma; o que mudou é a arquitetura interna.
+- Cada service aceita o(s) repository(s) no construtor — em produção usa os globais, em testes recebe mocks. Isso é o que torna os services testáveis sem MySQL real.
+
+### Notes (EN)
+- Remaining feature modules (ver_historico, relatorio_curva, csv_export, csv_import, backup, listar_produtos, configurar_alerta, editar_fornecedor, excluir_fornecedor, gerenciar_fornecedor) **still use direct SQL**. Full migration goes in v1.4c or later — the foundation is in place and the migration is mechanical (replace inline SQL with repository calls).
+- UI/UX **does not change** — users keep interacting the same way; what changed is the internal architecture.
+- Each service accepts the repository(ies) in the constructor — production uses the globals, tests get mocks. That's what makes services testable without real MySQL.
+
 ### Added (v1.4a — Repository pattern + exception hierarchy)
 - **`src/exceptions.py`** — hierarquia de exceções do domínio: `FlowLogError` (base) + `ValidationError`, `NotFoundError`, `BusinessRuleError`, `AuthenticationError`, `AuthorizationError`, `DatabaseError`, `InfrastructureError` + especializadas (`EstoqueInsuficienteError`, `ContaBloqueadaError`, `CNPJInvalidoError`). Feature modules vão passar a levantar estas exceções em vez de imprimir mensagens de erro.
 - **`src/repositories/`** — camada de acesso a dados por entidade:
