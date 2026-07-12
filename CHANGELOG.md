@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).*
 
 ## [Unreleased]
 
+### Estratégia (v1.5+ — virada de negócio)
+- **3 SKUs definidos**:
+  - **FlowLog Licença** — software on-premise, instalador Windows, one-time pay.
+  - **FlowLog Enterprise** — licença premium com multi-filial, API REST local, LDAP, audit log avançado, dashboard. Anual.
+  - **FlowLog Cloud** — SaaS web, multi-tenant, billing recorrente (Free / Pro / Business). Mensal.
+- **Roadmap reescrito** — 5 versões (v1.5 → v3.0) cobrindo Licença → Enterprise → Cloud → Cloud GA → IA.
+- **Stack Cloud definida** — FastAPI + SQLAlchemy + PostgreSQL + React + Stripe/ASAAS + Docker.
+- **Estimativa até Cloud GA**: 5-7 meses, foco em receita recorrente.
+
+Ver `ROADMAP.md` para o plano completo.
+
 ## [1.4.2] - 2026-07-12
 
 ### Security (v1.4d — segundo QA pass: bugs latentes)
