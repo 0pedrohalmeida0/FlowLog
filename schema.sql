@@ -102,3 +102,30 @@ CREATE INDEX idx_historico_produto  ON historico_movimentacoes(produto_id);
 CREATE INDEX idx_historico_data     ON historico_movimentacoes(data_movimentacao DESC);
 CREATE INDEX idx_historico_tipo     ON historico_movimentacoes(tipo);
 CREATE INDEX idx_historico_usuario  ON historico_movimentacoes(usuario_id);
+
+-- ============================================================
+-- Tabela: produtos_historico_edicoes (v1.3)
+-- ============================================================
+-- Snapshot JSON do produto antes e depois de cada edição.
+-- Permite auditar "o que mudou, por quem e quando" sem
+-- precisar de uma coluna por campo (que quebraria a cada
+-- nova coluna em `produtos`).
+-- ============================================================
+CREATE TABLE IF NOT EXISTS produtos_historico_edicoes (
+    id              INT AUTO_INCREMENT PRIMARY KEY,
+    produto_id      INT  NOT NULL,
+    usuario_id      INT  NULL,
+    snapshot_antes  JSON NOT NULL,
+    snapshot_depois JSON NOT NULL,
+    data_edicao     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_hist_edit_produto
+        FOREIGN KEY (produto_id) REFERENCES produtos(id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_hist_edit_usuario
+        FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+        ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX idx_hist_edit_produto ON produtos_historico_edicoes(produto_id);
+CREATE INDEX idx_hist_edit_data    ON produtos_historico_edicoes(data_edicao DESC);
+CREATE INDEX idx_hist_edit_usuario ON produtos_historico_edicoes(usuario_id);

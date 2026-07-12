@@ -10,6 +10,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/).*
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-07-12
+
+### Added (v1.3a — Edição de produtos)
+- **Edição de produto** no menu principal (opção 10). Permite editar nome, preço de custo e alerta mínimo.
+- **Snapshot de auditoria** em nova tabela `produtos_historico_edicoes`. Cada edição grava o produto antes e depois em JSON, com referência ao usuário que editou.
+- **Decisão de design:** edição de quantidade não é permitida no menu. Alterações de quantidade devem passar pelo fluxo de entrada/saída (opções 3 e 6) para preservar o histórico de movimentações. Quem precisa de ajuste manual usa SQL ou recurso de inventário físico (planejado para v1.3+).
+- Nova migration: `migrations/v1.2_to_v1.3.sql` cria a tabela `produtos_historico_edicoes` com índices por `produto_id`, `data_edicao` e `usuario_id`.
+
+### Migration
+```bash
+mysql -u root -p flowlog < migrations/v1.2_to_v1.3.sql
+```
+Cria a tabela `produtos_historico_edicoes` com 3 índices. Sem perda de dados.
+
+### Notes (PT)
+A v1.3 está sendo entregue em três partes. v1.3a (esta) fecha o maior buraco do CRUD: editar produtos. v1.3b trará exportação/importação CSV. v1.3c trará backup automático e sugestão de compra. UPDATES.md foi descontinuado em favor deste CHANGELOG (mais próximo do padrão da indústria).
+
+### Notes (EN)
+v1.3 is being shipped in three parts. v1.3a (this) closes the biggest CRUD gap: editing products. v1.3b will bring CSV import/export. v1.3c will bring automatic backup and purchase suggestions. UPDATES.md has been deprecated in favor of this CHANGELOG (closer to industry standard).
+
 ## [1.2.0] - 2026-07-12
 
 ### Added (v1.2a — Segurança)

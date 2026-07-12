@@ -17,6 +17,7 @@ from auth import requer_nivel
 from cadastrar_usuario import cadastrar_usuario
 from cadastro_interativo import cadastrar_produto_interativo
 from configurar_alerta import atualizar_alerta
+from editar_produto import editar_produto
 from entrada import entrada
 from gerenciar_fornecedor import listar_produtos_por_fornecedor
 from listar_produtos import alerta_estoque_baixo, listar_todos_produtos
@@ -74,6 +75,11 @@ def op_relatorio_curva():
     relatorio_curva_abc()
 
 
+@requer_nivel(2)
+def op_editar_produto():
+    editar_produto()
+
+
 # Tabela de opções do menu: chave -> (rótulo, handler)
 # Opções 1 e 5 não têm @requer_nivel (acessíveis a qualquer usuário logado).
 MENU_OPCOES = {
@@ -86,6 +92,7 @@ MENU_OPCOES = {
     "7": ("Cadastrar Novo Usuário (Administrador)", op_cadastrar_usuario),
     "8": ("Configurar Alerta de Estoque", op_configurar_alerta),
     "9": ("Relatório de Curva ABC (Giro de Estoque)", op_relatorio_curva),
+    "10": ("Editar Produto", op_editar_produto),
 }
 
 
