@@ -1,5 +1,9 @@
 from database import Database
-from utils import normalize_cnpj, validar_cnpj, formatar_cnpj
+from logging_config import get_logger
+from utils import formatar_cnpj, normalize_cnpj, validar_cnpj
+
+
+logger = get_logger(__name__)
 
 
 def gerenciar_fornecedor_interativo():
@@ -51,6 +55,7 @@ def gerenciar_fornecedor_interativo():
                 (nova_razao, fornecedor_id),
             )
             conexao.commit()
+            logger.info("Fornecedor ID=%d: razão social atualizada", fornecedor_id)
             print(f"✅ Sucesso! Razão social atualizada para '{nova_razao}'.")
 
         elif acao == '2':
@@ -66,6 +71,7 @@ def gerenciar_fornecedor_interativo():
                     )
                     conexao.commit()
                     if cursor.rowcount > 0:
+                        logger.info("Fornecedor ID=%d excluído", fornecedor_id)
                         print("✅ Fornecedor excluído com sucesso!")
                     else:
                         print("⚠️ Nenhum fornecedor foi excluído.")
@@ -76,8 +82,10 @@ def gerenciar_fornecedor_interativo():
                         pass
                     erro_texto = str(e).lower()
                     if "foreign key" in erro_texto:
+                        logger.warning("Fornecedor ID=%d tem produtos vinculados; exclusão negada", fornecedor_id)
                         print("❌ Não é possível excluir: este fornecedor possui produtos cadastrados no estoque.")
                     else:
+                        logger.exception("Erro ao excluir fornecedor ID=%d", fornecedor_id)
                         print(f"❌ Erro ao excluir: {e}")
             else:
                 print("Ação de exclusão cancelada.")
@@ -85,6 +93,7 @@ def gerenciar_fornecedor_interativo():
             print("❌ Opção inválida.")
 
     except Exception as e:
+        logger.exception("Erro no gerenciamento de fornecedor")
         print(f"❌ Erro inesperado: {e}")
     finally:
         try:

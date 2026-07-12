@@ -1,99 +1,125 @@
-from listar_produtos import listar_todos_produtos, alerta_estoque_baixo
-from cadastro_interativo import cadastrar_produto_interativo
-from saida_estoque import registrar_saida
-from ver_historico import exibir_relatorio_movimentacoes
-from gerenciar_fornecedor import listar_produtos_por_fornecedor
-from entrada import entrada
-from login import fazer_login
+"""Menu principal do FlowLog.
+
+Este é o único ponto que conhece todas as opções disponíveis e seus
+handlers. O controle de acesso é feito via decorator @requer_nivel —
+não há mais `if nivel_usuario == 1: print("Acesso Negado")` espalhado.
+"""
+
+from auth import requer_nivel
 from cadastrar_usuario import cadastrar_usuario
+from cadastro_interativo import cadastrar_produto_interativo
 from configurar_alerta import atualizar_alerta
+from entrada import entrada
+from gerenciar_fornecedor import listar_produtos_por_fornecedor
+from listar_produtos import alerta_estoque_baixo, listar_todos_produtos
+from logging_config import get_logger, setup_logging
+from login import fazer_login
 from relatorio_curva import relatorio_curva_abc
+from saida_estoque import registrar_saida
+from session import logout
+from ver_historico import exibir_relatorio_movimentacoes
+
+
+logger = get_logger(__name__)
+
+
+# ============================================================
+# Wrappers com RBAC
+# ============================================================
+# O decorator é aplicado aqui (não nos módulos de feature) para manter
+# os módulos de feature testáveis e usáveis diretamente em outros pontos
+# (ex: CLI, testes) sem depender do nível do usuário logado.
+
+@requer_nivel(2)
+def op_cadastrar_produto():
+    cadastrar_produto_interativo()
+
+
+@requer_nivel(2)
+def op_registrar_saida():
+    registrar_saida()
+    alerta_estoque_baixo()
+
+
+@requer_nivel(2)
+def op_ver_historico():
+    exibir_relatorio_movimentacoes()
+
+
+@requer_nivel(2)
+def op_entrada_estoque():
+    entrada()
+
+
+@requer_nivel(3)
+def op_cadastrar_usuario():
+    cadastrar_usuario()
+
+
+@requer_nivel(2)
+def op_configurar_alerta():
+    atualizar_alerta()
+
+
+@requer_nivel(2)
+def op_relatorio_curva():
+    relatorio_curva_abc()
+
+
+# Tabela de opções do menu: chave -> (rótulo, handler)
+# Opções 1 e 5 não têm @requer_nivel (acessíveis a qualquer usuário logado).
+MENU_OPCOES = {
+    "1": ("Listar Produtos", listar_todos_produtos),
+    "2": ("Cadastrar Novo Produto", op_cadastrar_produto),
+    "3": ("Registrar Saída (Baixa)", op_registrar_saida),
+    "4": ("Ver Histórico de Movimentações", op_ver_historico),
+    "5": ("Listar Produtos por Fornecedor", listar_produtos_por_fornecedor),
+    "6": ("Entrada de estoque", op_entrada_estoque),
+    "7": ("Cadastrar Novo Usuário (Administrador)", op_cadastrar_usuario),
+    "8": ("Configurar Alerta de Estoque", op_configurar_alerta),
+    "9": ("Relatório de Curva ABC (Giro de Estoque)", op_relatorio_curva),
+}
+
+
+def _imprimir_menu():
+    print("\n" + "=" * 40)
+    print("       FLOWLOG - GESTÃO DE ESTOQUE")
+    print("=" * 40)
+    for chave, (rotulo, _) in MENU_OPCOES.items():
+        print(f"{chave}. {rotulo}")
+    print("0. Sair")
+    print("=" * 40)
+
 
 def menu():
-    nivel_usuario = fazer_login()
-    if not nivel_usuario:
+    setup_logging()
+    logger.info("Iniciando FlowLog")
+
+    nivel = fazer_login()
+    if not nivel:
+        logger.warning("Login falhou; encerrando")
         return
-    # 1. O alerta roda aqui, uma única vez ao iniciar
+
+    # O alerta roda aqui, uma única vez ao iniciar
     alerta_estoque_baixo()
-    
-    # 2. O programa entra no loop infinito do menu
+
     while True:
-        print("\n" + "="*40)
-        print("       FLOWLOG - GESTÃO DE ESTOQUE")
-        print("="*40)
-        print("1. Listar Produtos")
-        print("2. Cadastrar Novo Produto")
-        print("3. Registrar Saída (Baixa)")
-        print("4. Ver Histórico de Movimentações")
-        print("5. Listar Produtos por Fornecedor")
-        print("6. Entrada de estoque")
-        print("7. Cadastrar Novo Usuário (Administrador)")
-        print("8. Configurar Alerta de Estoque")
-        print("9. Relatório de Curva ABC (Giro de Estoque)")
-        print("0. Sair")
-        print("="*40)
-        
-        opcao = input("\nEscolha uma opção: ")
-        
-        if opcao == "1":
-            # Opção liberada para todos
-            listar_todos_produtos()
+        _imprimir_menu()
+        opcao = input("\nEscolha uma opção: ").strip()
 
-        elif opcao == "2":
-            # TRAVA DE SEGURANÇA
-            if nivel_usuario == 1:
-                print("\n⛔ Acesso Negado: Apenas usuários autorizados.")
-            else:
-                cadastrar_produto_interativo()
-
-        elif opcao == "3":
-            # TRAVA DE SEGURANÇA
-            if nivel_usuario == 1:
-                print("\n⛔ Acesso Negado: Apenas usuários autorizados.")
-            else:
-                registrar_saida()
-                alerta_estoque_baixo()
-
-        elif opcao == "4":
-            if nivel_usuario == 1:
-                print("\n⛔ Acesso Negado: Apenas usuários autorizados.")
-            else:
-                exibir_relatorio_movimentacoes()
-
-        elif opcao == "5":
-            listar_produtos_por_fornecedor()
-
-        elif opcao == "6":
-            if nivel_usuario == 1:
-                print("\n⛔ Acesso Negado: Apenas usuários autorizados.")
-            else:
-                entrada()
-                
-        elif opcao == "7":
-            # TRAVA DE SEGURANÇA SUPERIOR (NÍVEL 3)
-            if nivel_usuario != 3:
-                print("\n⛔ Acesso Negado: Apenas a Administração (Nível 3) pode cadastrar novos usuários.")
-            else:
-                cadastrar_usuario()
-                
-        elif opcao == "8":
-            if nivel_usuario == 1:
-                print("\n⛔ Acesso Negado: Apenas usuários autorizados.")
-            else:
-                atualizar_alerta()
-                
-        elif opcao == "9":
-            if nivel_usuario == 1:
-                print("\n⛔ Acesso Negado: Apenas usuários autorizados.")
-            else:
-                relatorio_curva_abc()
-
-        elif opcao == "0":
+        if opcao == "0":
+            logger.info("Encerrando sistema")
             print("\nEncerrando o sistema... Bom descanso!")
-            break  # Aqui sim usamos o break, pois o usuário QUER sair do programa
+            logout()
+            break
 
-        else:
+        if opcao not in MENU_OPCOES:
             print("\n⚠️ Opção inválida! Tente novamente.")
+            continue
+
+        _, handler = MENU_OPCOES[opcao]
+        handler()
+
 
 if __name__ == "__main__":
     menu()

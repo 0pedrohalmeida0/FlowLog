@@ -1,5 +1,10 @@
 from database import Database
+from logging_config import get_logger
+from session import usuario_id_atual
 from utils import registrar_log
+
+
+logger = get_logger(__name__)
 
 
 def registrar_saida():
@@ -43,8 +48,13 @@ def registrar_saida():
             (nova_qtd, id_produto),
         )
 
-        registrar_log(cursor, id_produto, 'SAIDA', quantidade_saida)
+        usuario_id = usuario_id_atual()
+        registrar_log(cursor, id_produto, 'SAIDA', quantidade_saida, usuario_id)
 
+        logger.info(
+            "Saída registrada: produto_id=%d qtd=-%d usuario_id=%s",
+            id_produto, quantidade_saida, usuario_id,
+        )
         print("📜 Movimentação registrada no histórico.")
         print(f"\n✅ Saída registrada! {nome_atual}: {qtd_atual} -> {nova_qtd}")
 

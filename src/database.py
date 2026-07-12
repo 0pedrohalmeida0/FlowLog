@@ -1,16 +1,29 @@
+"""Camada de acesso ao MySQL com pool de conexões.
+
+O pool (MySQLConnectionPool) é compartilhado entre todas as instâncias de
+Database — é um singleton por classe, criado lazy na primeira chamada.
+Cada conexão retornada por `connect()` vem do pool; `close()` a devolve
+para reuso. Em escala, isso evita o overhead de abrir/fechar socket TCP
+a cada operação.
+"""
+
 import os
 from contextlib import contextmanager
 
 import mysql.connector
-from mysql.connector import Error
+from mysql.connector import Error, pooling
 from dotenv import load_dotenv
 
-# Carrega as variáveis de ambiente do arquivo .env
+from logging_config import get_logger
+
+
 load_dotenv()
+
+logger = get_logger(__name__)
 
 
 class Database:
-    """Camada de acesso ao MySQL.
+    """Acesso ao MySQL com pool de conexões singleton.
 
     Oferece duas formas de uso:
 
@@ -21,7 +34,7 @@ class Database:
             cur = conn.cursor()
             cur.execute(...)
             conn.commit()
-            cur.close(); conn.close()
+            cur.close(); conn.close()  # devolve ao pool
 
     2. Forma recomendada para operações multi-statement (transação atômica):
         with Database().transaction() as (conn, cur):
@@ -29,25 +42,47 @@ class Database:
             cur.execute(...)
         # commit() automático se nada lançar exceção;
         # rollback() automático se algo falhar;
-        # cursor e conexão sempre fechados.
+        # cursor e conexão sempre fechados (close devolve ao pool).
     """
 
+    _pool = None  # singleton: compartilhado entre instâncias
+
     def __init__(self):
-        self.config = {
-            'host': os.getenv('DB_HOST'),
-            'user': os.getenv('DB_USER'),
-            'password': os.getenv('DB_PASSWORD'),
-            'database': os.getenv('DB_NAME'),
-            'auth_plugin': 'mysql_native_password',
+        # Não cria o pool aqui — só quando alguém pedir.
+        # Isso facilita testes e evita falha cedo se o .env não estiver pronto.
+        pass
+
+    @classmethod
+    def _get_config(cls):
+        return {
+            "host": os.getenv("DB_HOST"),
+            "user": os.getenv("DB_USER"),
+            "password": os.getenv("DB_PASSWORD"),
+            "database": os.getenv("DB_NAME"),
+            "auth_plugin": "mysql_native_password",
         }
 
+    @classmethod
+    def _get_pool(cls, pool_size=5):
+        if cls._pool is None:
+            try:
+                cls._pool = pooling.MySQLConnectionPool(
+                    pool_name="flowlog_pool",
+                    pool_size=pool_size,
+                    **cls._get_config(),
+                )
+                logger.info("Pool MySQL inicializado (pool_size=%d)", pool_size)
+            except Error as e:
+                logger.error("Falha ao criar pool MySQL: %s", e)
+                raise
+        return cls._pool
+
     def connect(self):
-        """Abre uma conexão simples. Retorna a conexão ou None em caso de erro."""
+        """Pega uma conexão do pool. Retorna None se o pool não puder fornecer."""
         try:
-            connection = mysql.connector.connect(**self.config, use_pure=True)
-            return connection
+            return self._get_pool().get_connection()
         except Error as e:
-            print(f"❌ Erro ao conectar ao banco: {e}")
+            logger.error("Erro ao obter conexão do pool: %s", e)
             return None
 
     @contextmanager
@@ -56,7 +91,7 @@ class Database:
 
         - commit() se o bloco terminar sem exceção;
         - rollback() se o bloco levantar qualquer exceção;
-        - cursor e conexão sempre fechados ao final.
+        - cursor.close() e conn.close() sempre (close devolve ao pool).
 
         Levanta ConnectionError se não conseguir abrir a conexão.
         """
@@ -78,13 +113,17 @@ class Database:
                 cursor.close()
             except Exception:
                 pass
-            if conn.is_connected():
-                conn.close()
+            try:
+                conn.close()  # devolve ao pool, não fecha a conexão real
+            except Exception:
+                pass
 
 
 if __name__ == "__main__":
     db = Database()
     conn = db.connect()
     if conn:
-        print("✅ Sucesso: Conectado ao banco de dados FlowLog!")
+        logger.info("Sucesso: conectado ao banco de dados FlowLog!")
         conn.close()
+    else:
+        logger.error("Não foi possível conectar ao banco.")

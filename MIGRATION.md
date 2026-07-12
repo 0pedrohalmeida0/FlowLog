@@ -1,23 +1,83 @@
-# Guia de Migração — bcrypt + transações atômicas
+# Guia de Migração do FlowLog
 
-Esta versão do FlowLog traz três mudanças de infra que exigem ação
-manual antes do primeiro start:
+> Como atualizar uma instalação existente para a versão mais recente.
+> *How to upgrade an existing installation to the latest version.*
 
-## 1. Senha agora é hash bcrypt
+---
 
-A coluna `senha` na tabela `usuarios` precisa estar dimensionada para
-acomodar o hash bcrypt (60 caracteres em utf-8, prefixo `$2b$`).
+## v1.0 → v1.1 — Auditoria, RBAC, ABC de verdade, logging e pool
 
-### Se você está começando do zero
+Esta versão traz uma rodada grande de melhorias. As principais mudanças que
+exigem migração no banco de dados são:
 
-Simplesmente rode o `schema.sql` na raiz do projeto. Ele já cria a
-tabela com `VARCHAR(255)` para a coluna `senha`.
+### O que muda no banco
+
+- **Nova coluna** `usuario_id` em `historico_movimentacoes` (FK para `usuarios.id`, NULL permitido).
+  - Linhas legadas permanecem com `usuario_id = NULL` — a query de relatório usa
+    `LEFT JOIN` e exibe `(sistema)` para o username nesse caso.
+
+### Como aplicar a migration (banco existente)
+
+```bash
+mysql -u root -p flowlog < migrations/v1.0_to_v1.1.sql
+```
+
+Verificação rápida:
+
+```sql
+DESCRIBE historico_movimentacoes;
+-- Deve mostrar a coluna usuario_id (INT NULL) e o índice idx_historico_usuario
+```
+
+### Como aplicar se for uma instalação fresh
+
+Simplesmente rode o `schema.sql` do começo ao fim. Ele já está na versão v1.1.
 
 ```bash
 mysql -u root -p < schema.sql
 ```
 
-### Se você já tem o banco em produção
+### Mudanças na aplicação
+
+| Onde | Mudança | Impacto |
+|------|---------|---------|
+| `database.py` | Agora usa `MySQLConnectionPool` (singleton por classe) | Conexões são reusadas; sem mudança de comportamento observável |
+| `main.py` | Substituído o `if nivel == 1: ...` por `@requer_nivel(N)` | Mesmo controle, sem repetição |
+| `utils.registrar_log` | Nova assinatura: `(cursor, produto_id, tipo, quantidade, usuario_id)` | Chamada existente em `entrada.py` / `saida_estoque.py` foi atualizada |
+| `ver_historico.py` | Relatório agora mostra a coluna `USUÁRIO` | Vem do `LEFT JOIN` em `usuarios` |
+| `relatorio_curva.py` | Implementação real de Curva ABC (Pareto 80/15/5) | Saída do relatório agora inclui classe A/B/C e percentual |
+| Logging | Todos os `print()` substituídos por `logger.info/warning/error` | Console continua mostrando mensagens; arquivo `logs/flowlog.log` agora é gerado com rotação |
+| Novos módulos | `session.py`, `auth.py`, `logging_config.py` | Adicionados; nenhum efeito colateral sem usar |
+
+### Como verificar que está tudo OK
+
+```bash
+python -m py_compile src/*.py
+```
+
+Deve compilar sem erros. Opcionalmente, abra o sistema e faça uma saída —
+o `logs/flowlog.log` deve registrar a operação com seu `username`.
+
+---
+
+## v1.0 (recap) — bcrypt + transações atômicas
+
+Esta versão anterior trouxe três mudanças de infra que exigiam ação
+manual antes do primeiro start. Se você já está na v1.1, ignore esta
+seção — só importa para instalações que ainda estão na v0.x e vão
+pular direto para v1.1.
+
+### 1. Senha agora é hash bcrypt
+
+A coluna `senha` na tabela `usuarios` precisa estar dimensionada para
+acomodar o hash bcrypt (60 caracteres em utf-8, prefixo `$2b$`).
+
+**Se você está começando do zero (v1.1 fresh):**
+
+Simplesmente rode o `schema.sql`. Ele já cria a tabela com
+`VARCHAR(255)` para a coluna `senha`.
+
+**Se você já tem o banco em produção (v0.x → v1.1 direto):**
 
 A coluna atual provavelmente é `VARCHAR(64)` ou menor. Como **não é
 possível converter hashes bcrypt de volta em senhas em claro**, você
@@ -33,16 +93,20 @@ ALTER TABLE usuarios MODIFY senha VARCHAR(255) NOT NULL;
 -- 3. Limpar usuários existentes (TODOS serão perdidos)
 TRUNCATE TABLE usuarios;
 
--- 4. Recadastrar via menu do sistema, ou inserir manualmente:
+-- 4. Rodar a migration v1.0 → v1.1
+mysql -u root -p flowlog < migrations/v1.0_to_v1.1.sql
+
+-- 5. Recadastrar via menu do sistema, ou inserir manualmente:
 --    O hash bcrypt é gerado por: bcrypt.hashpw(senha, bcrypt.gensalt())
 --    Insira o hash em utf-8 (ex: $2b$12$ABC...60chars...xyz)
 ```
 
 > A partir desta versão, `verificar_senha()` recusa autenticar contas
-> com senha em texto puro e exibe um aviso. Ou seja, **toda conta sem
-> hash bcrypt será bloqueada** — o que é o comportamento desejado.
+> com senha em texto puro e registra um WARNING no log. Ou seja,
+> **toda conta sem hash bcrypt será bloqueada** — o que é o
+> comportamento desejado.
 
-## 2. Banco tem que existir
+### 2. Banco tem que existir
 
 O `database.py` carrega o nome do banco da variável `DB_NAME` no
 `.env`. Garanta que o `.env` está configurado:
@@ -54,41 +118,15 @@ DB_PASSWORD=sua_senha_forte
 DB_NAME=flowlog
 ```
 
-Crie o banco (caso ainda não exista) rodando o `schema.sql`.
-
-## 3. Dependência nova
-
-Adicionada `bcrypt` ao `requirements.txt`. Instale/reinstale:
+### 3. Dependências
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## 4. Mudanças de comportamento
+(mantido desde v1.0: `mysql-connector-python`, `python-dotenv`, `bcrypt`)
 
-| Onde                  | Antes                                | Agora                                                      |
-|-----------------------|--------------------------------------|------------------------------------------------------------|
-| `login.py`            | Senha em texto puro                  | Hash bcrypt; `getpass` para esconder a senha no terminal   |
-| `entrada.py`          | UPDATE + INSERT em conexões separadas | Uma única transação atômica (commit/rollback consistentes) |
-| `saida_estoque.py`    | UPDATE + INSERT em conexões separadas | Uma única transação atômica + `SELECT ... FOR UPDATE`      |
-| `cadastro_interativo` | Loop com código morto após `break`   | Loop limpo; valida CNPJ; insere `alerta_minimo`            |
-| `ver_historico.py`    | `f-string` montando SQL              | Query parametrizada via dicionário de constantes           |
-| `utils.py`            | `registrar_log(id, tipo, qtd)`       | `registrar_log(cursor, id, tipo, qtd)` — usa o cursor do chamador (transação) |
-| CNPJ em qualquer entrada | Só limpava caracteres              | Valida dígitos verificadores antes de gravar               |
-
-## 5. Próximas migrações recomendadas (não incluídas)
-
-Estas não estão neste patch, mas viram débito técnico rápido. Anote:
-
-- **Adicionar `usuario_id` em `historico_movimentacoes`** — sem isso
-  não dá pra responder "quem registrou a saída X". Cria a coluna,
-  popula retroativamente se possível, e propaga nos INSERTs de log.
-- **Bloqueio de conta após N tentativas falhas** — tabela
-  `tentativas_login` ou coluna `bloqueado_ate` em `usuarios`.
-- **Edição de produto** — hoje só dá pra excluir + recriar, o que
-  quebra a referência do histórico.
-
-## 6. Teste rápido pós-migração
+### 4. Teste rápido pós-migração
 
 ```bash
 python -m py_compile src/*.py
@@ -96,4 +134,14 @@ python -c "from src.utils import validar_cnpj; print(validar_cnpj('11.222.333/00
 python -c "from src.utils import validar_cnpj; print(validar_cnpj('11.222.333/0001-00'))"  # False
 ```
 
-Se algum `py_compile` reclamar, copie a mensagem e me manda.
+Se algum `py_compile` reclamar, copie a mensagem e abra uma issue.
+
+---
+
+## Resumo das migrations SQL
+
+| Versão de origem | Versão destino | Arquivo                                | Mudanças no schema                  |
+|------------------|----------------|----------------------------------------|-------------------------------------|
+| (nenhuma)        | v1.1           | `schema.sql` (do começo ao fim)         | Setup completo                      |
+| v1.0             | v1.1           | `migrations/v1.0_to_v1.1.sql`          | `+usuario_id` em `historico_movimentacoes` |
+| v0.x             | v1.1           | `MIGRATION.md` (seção "v1.0 recap") + `migrations/v1.0_to_v1.1.sql` | `senha` redimensionada + `+usuario_id` |

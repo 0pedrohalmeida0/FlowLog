@@ -1,8 +1,11 @@
 -- ============================================================
--- FlowLog - Schema do banco de dados
+-- FlowLog - Schema do banco de dados (v1.1)
 -- ============================================================
 -- MySQL 5.7+ / 8.x
 -- Charset: utf8mb4 (suporte completo a Unicode)
+--
+-- Fresh install: rode este arquivo do começo ao fim.
+-- Atualização de v1.0: veja migrations/v1.0_to_v1.1.sql
 -- ============================================================
 
 CREATE DATABASE IF NOT EXISTS flowlog
@@ -73,9 +76,10 @@ CREATE INDEX idx_produtos_alerta    ON produtos(quantidade, alerta_minimo);
 -- ============================================================
 -- Tabela: historico_movimentacoes
 -- ============================================================
--- Registra toda entrada e saída. ATENÇÃO: recomendo adicionar a
--- coluna usuario_id (FK para usuarios) na próxima migração, para
--- fechar o requisito de auditoria (ver MIGRATION.md).
+-- v1.1: agora cada linha registra QUEM fez a movimentação,
+-- via FK para usuarios(id). Linhas antigas (sem usuario_id)
+-- permanecem legíveis: a query usa LEFT JOIN e exibe "(sistema)"
+-- para o username quando o campo é NULL.
 -- ============================================================
 CREATE TABLE IF NOT EXISTS historico_movimentacoes (
     id                INT AUTO_INCREMENT PRIMARY KEY,
@@ -83,13 +87,18 @@ CREATE TABLE IF NOT EXISTS historico_movimentacoes (
     tipo              VARCHAR(10)   NOT NULL,    -- 'ENTRADA' ou 'SAIDA'
     quantidade        INT           NOT NULL,
     data_movimentacao DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    usuario_id        INT           NULL,        -- v1.1: NULL = registro legado
     CONSTRAINT fk_historico_produto
         FOREIGN KEY (produto_id) REFERENCES produtos(id)
         ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT fk_historico_usuario
+        FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+        ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT chk_tipo       CHECK (tipo IN ('ENTRADA', 'SAIDA')),
     CONSTRAINT chk_qtd_hist   CHECK (quantidade > 0)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE INDEX idx_historico_produto ON historico_movimentacoes(produto_id);
-CREATE INDEX idx_historico_data   ON historico_movimentacoes(data_movimentacao DESC);
-CREATE INDEX idx_historico_tipo   ON historico_movimentacoes(tipo);
+CREATE INDEX idx_historico_produto  ON historico_movimentacoes(produto_id);
+CREATE INDEX idx_historico_data     ON historico_movimentacoes(data_movimentacao DESC);
+CREATE INDEX idx_historico_tipo     ON historico_movimentacoes(tipo);
+CREATE INDEX idx_historico_usuario  ON historico_movimentacoes(usuario_id);

@@ -1,5 +1,9 @@
 from database import Database
-from utils import normalize_cnpj, validar_cnpj, formatar_cnpj
+from logging_config import get_logger
+from utils import formatar_cnpj, normalize_cnpj, validar_cnpj
+
+
+logger = get_logger(__name__)
 
 
 def listar_produtos_por_fornecedor():
@@ -20,7 +24,6 @@ def listar_produtos_por_fornecedor():
     try:
         cursor = conexao.cursor()
 
-        # PASSO 1: Buscar o fornecedor pelo CNPJ normalizado
         sql_busca_fornec = (
             "SELECT id, razao_social FROM fornecedores "
             "WHERE REPLACE(REPLACE(REPLACE(REPLACE(cnpj, '.', ''), '/', ''), '-', ''), ' ', '') = %s"
@@ -33,10 +36,8 @@ def listar_produtos_por_fornecedor():
             return
 
         fornecedor_id, razao_social = fornecedor
-
         print(f"\n📦 Produtos do fornecedor: {razao_social}")
 
-        # PASSO 2: Buscar os produtos vinculados a esse fornecedor
         cursor.execute(
             "SELECT nome, quantidade, preco_custo FROM produtos WHERE fornecedor_id = %s",
             (fornecedor_id,),
@@ -45,13 +46,14 @@ def listar_produtos_por_fornecedor():
         cursor.close()
 
         if produtos:
-            for produto in produtos:
-                nome, qtd, preco = produto
+            for nome, qtd, preco in produtos:
                 print(f"- {nome} | Estoque: {qtd} | Custo: R$ {preco:.2f}")
         else:
             print("Este fornecedor ainda não possui produtos cadastrados no inventário.")
 
+        logger.info("Listagem por fornecedor: id=%d produtos=%d", fornecedor_id, len(produtos))
     except Exception as e:
+        logger.exception("Erro ao listar produtos por fornecedor")
         print(f"❌ Erro inesperado: {e}")
     finally:
         if conexao and conexao.is_connected():

@@ -1,4 +1,8 @@
 from database import Database
+from logging_config import get_logger
+
+
+logger = get_logger(__name__)
 
 
 # Mapeamento de opção -> tipo a filtrar. NUNCA misturamos input do usuário
@@ -29,12 +33,13 @@ def exibir_relatorio_movimentacoes():
             print("⚠️ Opção inválida. Listando tudo.")
             tipo_filtro = None
 
-        # Query construída por partes, sem f-string concatenando input.
         sql_parts = [
             """
-            SELECT h.id, p.nome, h.tipo, h.quantidade, h.data_movimentacao
+            SELECT h.id, p.nome, h.tipo, h.quantidade, h.data_movimentacao,
+                   COALESCE(u.username, '(sistema)') AS usuario
             FROM historico_movimentacoes h
             JOIN produtos p ON h.produto_id = p.id
+            LEFT JOIN usuarios u ON h.usuario_id = u.id
             """,
         ]
         params = ()
@@ -51,22 +56,26 @@ def exibir_relatorio_movimentacoes():
         logs = cursor.fetchall()
         cursor.close()
 
-        # ==========================================
-        # Exibição dos dados
-        # ==========================================
         print("\n--- 📜 HISTÓRICO DE MOVIMENTAÇÕES (FLOWLOG) ---")
         if not logs:
             print("Nenhuma movimentação encontrada para o filtro selecionado.")
         else:
-            print(f"{'ID':<4} | {'PRODUTO':<20} | {'TIPO':<8} | {'QTD':<5} | {'DATA':<16}")
-            print("-" * 65)
+            print(
+                f"{'ID':<4} | {'PRODUTO':<20} | {'TIPO':<8} | {'QTD':<5} | "
+                f"{'USUÁRIO':<12} | {'DATA':<16}"
+            )
+            print("-" * 80)
             for log in logs:
-                id_log, nome_p, tipo, qtd, data = log
+                id_log, nome_p, tipo, qtd, data, usuario = log
                 data_formatada = data.strftime("%d/%m %H:%M")
-                print(f"{id_log:<4} | {nome_p:<20} | {tipo:<8} | {qtd:<5} | {data_formatada}")
-            print("-" * 65)
-
+                print(
+                    f"{id_log:<4} | {nome_p:<20} | {tipo:<8} | {qtd:<5} | "
+                    f"{usuario:<12} | {data_formatada:<16}"
+                )
+            print("-" * 80)
+            logger.info("Histórico exibido: filtro=%s linhas=%d", escolha, len(logs))
     except Exception as e:
+        logger.exception("Erro ao gerar relatório de movimentações")
         print(f"❌ Erro ao gerar relatório: {e}")
     finally:
         if conexao and conexao.is_connected():

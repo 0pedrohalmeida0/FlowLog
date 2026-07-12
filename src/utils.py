@@ -1,10 +1,13 @@
-"""Funções utilitárias: validação de CNPJ, formatação, hash de senha e log de movimentação."""
+"""Funções utilitárias: CNPJ, hash de senha, logger nomeado e log de movimentação."""
 
 import re
 
 import bcrypt
 
-from database import Database
+from logging_config import get_logger
+
+
+logger = get_logger(__name__)
 
 
 # ============================================================
@@ -77,8 +80,7 @@ def verificar_senha(senha_plana, hash_armazenado):
 
     - Se o hash estiver em formato bcrypt ($2a$/$2b$/$2y$), usa bcrypt.checkpw.
     - Se o hash NÃO for bcrypt (legado em texto puro), retorna False e
-      imprime um aviso. Isso força o recadastro do usuário, em vez de
-      silenciosamente autenticar uma senha em claro.
+      registra um WARNING no log. Isso força o recadastro do usuário.
     """
     if not senha_plana or not hash_armazenado:
         return False
@@ -92,10 +94,11 @@ def verificar_senha(senha_plana, hash_armazenado):
         try:
             return bcrypt.checkpw(senha_plana.encode('utf-8'), hash_str.encode('utf-8'))
         except (ValueError, TypeError):
+            logger.exception("Falha ao verificar hash bcrypt")
             return False
 
     # Senha em texto puro (legado): recusa autenticar.
-    print("⚠️ Senha em texto puro detectada. Recadastre o usuário para migrar para bcrypt.")
+    logger.warning("Senha em texto puro detectada; usuário precisa ser recadastrado")
     return False
 
 
@@ -103,16 +106,24 @@ def verificar_senha(senha_plana, hash_armazenado):
 # Log de movimentação
 # ============================================================
 
-def registrar_log(cursor, produto_id, tipo, quantidade):
+def registrar_log(cursor, produto_id, tipo, quantidade, usuario_id=None):
     """Insere uma linha no histórico de movimentações usando o cursor fornecido.
 
     IMPORTANTE: esta função NÃO abre conexão própria. Ela deve ser chamada
     de dentro de uma transação aberta pelo chamador, garantindo que o log
-    e a atualização de estoque sejam atômicos. Se o cursor não vier de
-    uma transação, ainda assim funciona — mas o caller perde a garantia.
+    e a atualização de estoque sejam atômicos.
+
+    Args:
+        cursor: cursor MySQL ativo (de uma transação).
+        produto_id: ID do produto movimentado.
+        tipo: 'ENTRADA' ou 'SAIDA'.
+        quantidade: quantidade movimentada (sempre > 0).
+        usuario_id: ID do usuário que registrou a movimentação. Pode ser None
+            apenas em logs legados; o sistema atual sempre deve fornecê-lo.
     """
     sql = (
-        "INSERT INTO historico_movimentacoes (produto_id, tipo, quantidade) "
-        "VALUES (%s, %s, %s)"
+        "INSERT INTO historico_movimentacoes "
+        "(produto_id, tipo, quantidade, usuario_id) "
+        "VALUES (%s, %s, %s, %s)"
     )
-    cursor.execute(sql, (produto_id, tipo, quantidade))
+    cursor.execute(sql, (produto_id, tipo, quantidade, usuario_id))

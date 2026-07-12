@@ -1,5 +1,9 @@
 from database import Database
+from logging_config import get_logger
 from utils import hash_senha
+
+
+logger = get_logger(__name__)
 
 
 def cadastrar_usuario():
@@ -30,21 +34,18 @@ def cadastrar_usuario():
 
     db = Database()
     conexao = db.connect()
-
     if not conexao:
         return
 
     try:
         cursor = conexao.cursor()
-        sql = (
-            "INSERT INTO usuarios (username, senha, nivel_acesso) "
-            "VALUES (%s, %s, %s)"
+        cursor.execute(
+            "INSERT INTO usuarios (username, senha, nivel_acesso) VALUES (%s, %s, %s)",
+            (novo_username, senha_hash, nivel),
         )
-        cursor.execute(sql, (novo_username, senha_hash, nivel))
         conexao.commit()
-        print(
-            f"\n✅ Sucesso! O usuário '{novo_username}' foi cadastrado com Nível {nivel}."
-        )
+        logger.info("Usuário '%s' cadastrado com nível %d", novo_username, nivel)
+        print(f"\n✅ Sucesso! O usuário '{novo_username}' foi cadastrado com Nível {nivel}.")
     except Exception as e:
         try:
             conexao.rollback()
@@ -52,8 +53,10 @@ def cadastrar_usuario():
             pass
         erro = str(e).lower()
         if 'duplicate' in erro or 'unique' in erro:
+            logger.warning("Tentativa de cadastrar username duplicado: '%s'", novo_username)
             print(f"\n❌ Falha: o usuário '{novo_username}' já existe.")
         else:
+            logger.exception("Falha ao cadastrar usuário '%s'", novo_username)
             print(f"\n❌ Falha ao cadastrar: {e}")
     finally:
         try:

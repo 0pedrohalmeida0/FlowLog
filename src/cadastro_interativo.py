@@ -1,5 +1,9 @@
 from database import Database
-from utils import normalize_cnpj, validar_cnpj, formatar_cnpj
+from logging_config import get_logger
+from utils import formatar_cnpj, normalize_cnpj, validar_cnpj
+
+
+logger = get_logger(__name__)
 
 
 def cadastrar_produto_interativo():
@@ -23,7 +27,7 @@ def cadastrar_produto_interativo():
         print("❌ Erro: nos campos quantidade e preço, use apenas números.")
         return
 
-    # Coleta o alerta mínimo (loop limpo, sem código morto após o break).
+    # Coleta o alerta mínimo
     alerta_minimo = None
     while True:
         resposta = input(
@@ -44,14 +48,12 @@ def cadastrar_produto_interativo():
         else:
             print("Resposta inválida. Digite apenas 'S' ou 'N'.")
 
-    # Coleta e valida o CNPJ
     cnpj_input = input("Digite o CNPJ do fornecedor: ").strip()
     if not validar_cnpj(cnpj_input):
         print("❌ Erro: CNPJ inválido. Verifique os dígitos e tente novamente.")
         return
     cnpj_fornecedor = normalize_cnpj(cnpj_input)
 
-    # Conexão única para fornecedor + produto (insert atômico)
     db = Database()
     conexao = db.connect()
     if not conexao:
@@ -83,6 +85,8 @@ def cadastrar_produto_interativo():
                 (razao_social, cnpj_fornecedor),
             )
             fornecedor_id = cursor.lastrowid
+            logger.info("Fornecedor '%s' (CNPJ %s) cadastrado como ID=%d",
+                        razao_social, formatar_cnpj(cnpj_fornecedor), fornecedor_id)
             print(f"✅ Fornecedor '{razao_social}' cadastrado com sucesso!")
 
         # 2. Insere o produto vinculado ao fornecedor
@@ -92,7 +96,12 @@ def cadastrar_produto_interativo():
             (nome, quantidade, preco, fornecedor_id, alerta_minimo),
         )
         conexao.commit()
+        produto_id = cursor.lastrowid
 
+        logger.info(
+            "Produto '%s' cadastrado: id=%d qtd=%d preço=%.2f fornecedor_id=%d alerta_minimo=%s",
+            nome, produto_id, quantidade, preco, fornecedor_id, alerta_minimo,
+        )
         print(f"\n✅ Sucesso! '{nome}' foi adicionado ao inventário.")
         print(f"   Fornecedor: {formatar_cnpj(cnpj_fornecedor)}")
 
@@ -101,6 +110,7 @@ def cadastrar_produto_interativo():
             conexao.rollback()
         except Exception:
             pass
+        logger.exception("Erro ao cadastrar produto '%s'", nome)
         print(f"❌ Erro inesperado: {e}")
     finally:
         try:
