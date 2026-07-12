@@ -364,6 +364,62 @@ class TestProdutoService:
         # log_edicoes.registrar foi chamado
         self.mock_log.registrar.assert_called_once()
 
+    def test_editar_usa_select_for_update_cr04(self):
+        """CR-04: editar deve usar SELECT ... FOR UPDATE dentro da
+        transação para evitar lost-update em concorrência."""
+        self.mock_prod.buscar_por_id.return_value = {
+            "id": 1,
+            "nome": "Velho",
+            "quantidade": 5,
+            "preco_custo": 10.0,
+            "fornecedor_id": 1,
+            "alerta_minimo": 1,
+        }
+        mock_cur = MagicMock()
+        mock_cur.fetchone.return_value = {
+            "id": 1,
+            "nome": "Novo",
+            "quantidade": 5,
+            "preco_custo": 10.0,
+            "fornecedor_id": 1,
+            "alerta_minimo": 1,
+        }
+        mock_cur.rowcount = 1
+        self.mock_prod.transaction.return_value.__enter__.return_value = (MagicMock(), mock_cur)
+
+        self.svc.editar(1, {"nome": "Novo"})
+
+        # CR-04: o lock foi feito durante a transação
+        self.mock_prod.buscar_por_id_locked.assert_called_once()
+
+    def test_editar_rowcount_zero_levanta_not_found(self):
+        """Se o produto foi deletado entre o SELECT e o UPDATE, rowcount=0."""
+        self.mock_prod.buscar_por_id.return_value = {
+            "id": 1,
+            "nome": "X",
+            "quantidade": 1,
+            "preco_custo": 10.0,
+            "fornecedor_id": 1,
+            "alerta_minimo": 1,
+        }
+        mock_cur = MagicMock()
+        mock_cur.rowcount = 0
+        self.mock_prod.transaction.return_value.__enter__.return_value = (MagicMock(), mock_cur)
+        with pytest.raises(NotFoundError):
+            self.svc.editar(1, {"nome": "Y"})
+
+    def test_buscar_e_listar_todos_fachada_publica_me01(self):
+        """ME-01: métodos públicos do service substituem acesso a
+        atributos privados pelos feature modules."""
+        self.mock_prod.buscar_por_id.return_value = {"id": 7, "nome": "X"}
+        self.mock_prod.listar_todos.return_value = [{"id": 1}, {"id": 2}]
+        self.mock_prod.listar_abaixo_do_minimo.return_value = [
+            {"nome": "A", "quantidade": 0, "alerta_minimo": 1, "fornecedor": "F"}
+        ]
+        assert self.svc.buscar(7)["id"] == 7
+        assert len(self.svc.listar_todos()) == 2
+        assert self.svc.listar_abaixo_do_minimo()[0]["nome"] == "A"
+
 
 # ============================================================
 # FornecedorService

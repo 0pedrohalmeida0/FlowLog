@@ -11,14 +11,14 @@ class ProdutoRepository(BaseRepository):
     _TABLE = "produtos"
 
     def listar_todos(self) -> list[dict]:
-        """Retorna todos os produtos (sem join com fornecedor)."""
+        """Retorna todos os produtos (sem join com fornecedor), ordenados por id."""
         conn = self._connect()
         try:
             cur = conn.cursor(dictionary=True)
             cur.execute(
                 "SELECT id, nome, quantidade, preco_custo, fornecedor_id, "
                 "alerta_minimo, data_entrada "
-                f"FROM {self._TABLE} ORDER BY id"
+                f"FROM {self._TABLE} ORDER BY id ASC"
             )
             return cur.fetchall()
         finally:
@@ -39,6 +39,21 @@ class ProdutoRepository(BaseRepository):
         finally:
             cur.close()
             conn.close()
+
+    def buscar_por_id_locked(self, produto_id: int, conn, cur) -> dict | None:
+        """CR-04: SELECT ... FOR UPDATE dentro de uma transação existente.
+
+        Bloqueia a linha até o fim da transação — impede lost update em
+        edições concorrentes. Deve ser chamado com o (conn, cur) de um
+        `with self.transaction() as ...` em andamento.
+        """
+        cur.execute(
+            "SELECT id, nome, quantidade, preco_custo, fornecedor_id, "
+            "alerta_minimo, data_entrada "
+            f"FROM {self._TABLE} WHERE id = %s FOR UPDATE",
+            (produto_id,),
+        )
+        return cur.fetchone()
 
     def listar_por_fornecedor(self, fornecedor_id: int) -> list[dict]:
         conn = self._connect()

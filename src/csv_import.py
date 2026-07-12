@@ -34,6 +34,19 @@ CAMPOS_OBRIGATORIOS = ["nome", "quantidade", "preco_custo", "fornecedor_cnpj"]
 CAMPOS_OPCIONAIS = ["alerta_minimo"]
 
 
+def _csv_safe(s):
+    """AL-03: sanitiza contra CSV injection (CVE-2014-3524).
+
+    Se o nome do produto começar com =, +, -, @, TAB ou CR, o Excel/Sheets
+    interpreta como fórmula — em casos piores exfiltra dados via DDE ou
+    executa comandos. Prefixa com apóstrofo para neutralizar.
+    """
+    s = str(s)
+    if s and s[0] in ("=", "+", "-", "@", "\t", "\r"):
+        s = "'" + s
+    return s
+
+
 def _detectar_delimiter(sample):
     """Detecta separador: ; (preferido BR) ou , (padrão internacional)."""
     # Conta ocorrências nos primeiros 4KB
@@ -121,8 +134,9 @@ def _normalizar_linha(raw, idx):
     if erros:
         return None, [f"linha {idx}: " + "; ".join(erros)]
 
+    # AL-03: sanitiza nome contra CSV injection
     return {
-        "nome": nome,
+        "nome": _csv_safe(nome),
         "quantidade": quantidade,
         "preco_custo": preco,
         "fornecedor_cnpj": cnpj,
@@ -143,6 +157,18 @@ def importar_produtos_csv():
         print(f"❌ Arquivo não encontrado: {caminho}")
         return
 
+    # AL-03: limite de tamanho para evitar OOM com CSV gigante.
+    # 50 MB cabe ~500k linhas simples. Pra mais que isso, o usuário
+    # deveria usar um loader de streaming; por enquanto, hard-limit.
+    MAX_CSV_SIZE = 50 * 1024 * 1024
+    if caminho.stat().st_size > MAX_CSV_SIZE:
+        size_mb = caminho.stat().st_size / 1024 / 1024
+        print(
+            f"❌ Arquivo muito grande ({size_mb:.1f} MB > 50 MB). "
+            f"Divida em arquivos menores ou contate o suporte."
+        )
+        return
+
     # Lê o arquivo (tenta utf-8-sig primeiro, depois utf-8)
     texto = None
     for enc in ("utf-8-sig", "utf-8", "latin-1"):
@@ -160,12 +186,27 @@ def importar_produtos_csv():
 
     validas = []
     invalidas = []
+    cnpjs_unicos = set()
     for idx, raw in enumerate(reader, start=2):  # linha 2 = após header
         dados, erros = _normalizar_linha(raw, idx)
         if dados is None:
             invalidas.extend(erros)
         else:
             validas.append(dados)
+            cnpjs_unicos.add(dados["fornecedor_cnpj"])
+
+    # CR-05: detecta CNPJs duplicados DENTRO do CSV. Se 2 linhas têm
+    # o mesmo CNPJ novo, a 2a INSERT dá UNIQUE error e o rollback joga
+    # fora TUDO. Aqui só avisamos; na inserção, agrupamos por CNPJ.
+    cnpjs_no_csv = [p["fornecedor_cnpj"] for p in validas]
+    duplicados = {c for c in cnpjs_no_csv if cnpjs_no_csv.count(c) > 1}
+    if duplicados:
+        print(
+            "\n⚠️  Aviso: o CSV contém CNPJs repetidos (vou usar o mesmo "
+            "fornecedor para todos os produtos com aquele CNPJ):"
+        )
+        for c in sorted(duplicados):
+            print(f"   • {c}")
 
     print("\n📊 Resumo da validação:")
     print(f"   ✅ {len(validas)} linhas válidas")
@@ -193,8 +234,16 @@ def importar_produtos_csv():
 def _inserir_produtos(produtos):
     """Insere a lista de produtos no banco em uma única transação.
 
-    Para cada produto, resolve o fornecedor (cria se necessário).
+    CR-05: agrupa produtos por CNPJ e resolve fornecedores em batch.
+    Antes: para cada produto, fazia SELECT e/ou INSERT no fornecedor.
+    Se 2 linhas tinham o mesmo CNPJ novo, a 2a INSERT falhava com
+    UNIQUE, e o rollback joga fora TUDO. Agora:
+      1. Coleta CNPJs únicos da lista.
+      2. Pré-cria fornecedores que não existem (uma vez, na mesma transação).
+      3. Insere os produtos em batch.
     """
+    from exceptions import ValidationError
+
     db = Database()
     conexao = db.connect()
     if not conexao:
@@ -205,32 +254,56 @@ def _inserir_produtos(produtos):
     try:
         cursor = conexao.cursor()
 
-        for p in produtos:
-            # 1. Resolve fornecedor
+        # 1. Pré-resolver fornecedores
+        cnpjs_unicos = {p["fornecedor_cnpj"] for p in produtos}
+
+        for cnpj in cnpjs_unicos:
             cursor.execute(
                 "SELECT id FROM fornecedores "
                 "WHERE REPLACE(REPLACE(REPLACE(REPLACE(cnpj, '.', ''), '/', ''), '-', ''), ' ', '') = %s",
-                (p["fornecedor_cnpj"],),
+                (cnpj,),
             )
             row = cursor.fetchone()
             if row:
-                fornecedor_id = row[0]
-            else:
-                # Cadastra o fornecedor com razao_social genérica
-                razao_social = f"(importado CSV) {p['fornecedor_cnpj']}"
+                continue
+            # CR-05: 2a INSERT para o mesmo CNPJ é impossível agora porque
+            # processamos cada CNPJ uma única vez.
+            try:
+                razao_social = f"(importado CSV) {cnpj}"
                 cursor.execute(
                     "INSERT INTO fornecedores (razao_social, cnpj) VALUES (%s, %s)",
-                    (razao_social, p["fornecedor_cnpj"]),
+                    (razao_social, cnpj),
                 )
-                fornecedor_id = cursor.lastrowid
                 fornecedores_criados += 1
                 logger.info(
                     "Fornecedor criado via import CSV: CNPJ=%s ID=%d",
-                    p["fornecedor_cnpj"],
-                    fornecedor_id,
+                    cnpj,
+                    cursor.lastrowid,
                 )
+            except Exception as e:
+                # Se já foi criado em outro processo (race), segue.
+                if "duplicate" not in str(e).lower() and "unique" not in str(e).lower():
+                    raise
 
-            # 2. Insere o produto
+        # 2. Re-busca todos os IDs em um único SELECT
+        cnpj_to_id = {}
+        for cnpj in cnpjs_unicos:
+            cursor.execute(
+                "SELECT id FROM fornecedores "
+                "WHERE REPLACE(REPLACE(REPLACE(REPLACE(cnpj, '.', ''), '/', ''), '-', ''), ' ', '') = %s",
+                (cnpj,),
+            )
+            row = cursor.fetchone()
+            if row:
+                cnpj_to_id[cnpj] = row[0]
+
+        # 3. Insere os produtos em batch
+        for p in produtos:
+            fornecedor_id = cnpj_to_id.get(p["fornecedor_cnpj"])
+            if not fornecedor_id:
+                raise ValidationError(
+                    f"Fornecedor com CNPJ {p['fornecedor_cnpj']} não foi resolvido."
+                )
             cursor.execute(
                 "INSERT INTO produtos (nome, quantidade, preco_custo, fornecedor_id, alerta_minimo) "
                 "VALUES (%s, %s, %s, %s, %s)",

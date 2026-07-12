@@ -16,6 +16,10 @@ from pathlib import Path
 
 from logging_config import get_logger
 
+# BA-02: imports no topo do módulo (em vez de dentro da função).
+# Resolve a noqa:PLC0415 e elimina ciclos de import.
+from relatorio_curva import _SQL_CURVA_ABC
+
 logger = get_logger(__name__)
 
 
@@ -143,8 +147,6 @@ def exportar_curva_abc(cursor):
     (vide relatorio_curva._SQL_CURVA_ABC) e está posicionado antes
     do fetchall. Aqui refazemos a query para manter a função independente.
     """
-    from relatorio_curva import _SQL_CURVA_ABC  # noqa: PLC0415
-
     headers = ["Classe", "Produto", "Saídas", "% Individual", "% Acumulado"]
     cursor.execute(_SQL_CURVA_ABC)
     rows = []

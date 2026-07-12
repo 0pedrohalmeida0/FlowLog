@@ -153,6 +153,22 @@ class TestProdutoRepository:
         assert repo.atualizar_campos(7, {}) == 0
         mock_db.transaction.assert_not_called()
 
+    def test_buscar_por_id_locked_cr04(self):
+        """CR-04: SELECT ... FOR UPDATE dentro de uma transação existente."""
+        mock_db, _, mock_cursor = _mock_db_com_cursor()
+        mock_cursor.fetchone.return_value = {"id": 7}
+        mock_conn = MagicMock()
+        repo = ProdutoRepository(db=mock_db)
+
+        result = repo.buscar_por_id_locked(7, mock_conn, mock_cursor)
+
+        assert result == {"id": 7}
+        args, _ = mock_cursor.execute.call_args
+        sql, params = args
+        assert "FOR UPDATE" in sql
+        assert "WHERE id = %s" in sql
+        assert params == (7,)
+
 
 # ============================================================
 # FornecedorRepository

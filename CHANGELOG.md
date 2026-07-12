@@ -10,6 +10,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/).*
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-07-12
+
+### Security (v1.4c — QA patch: correções críticas)
+- **CR-01** Senha do MySQL **não vai mais na linha de comando** (`backup.py`).
+  Antes: `mysqldump -uroot -pSenha123 ...` (visível em `ps aux`).
+  Agora: senha via env var `MYSQL_PWD` + `env=` no `subprocess.run`.
+  Defesa em profundidade: `env.pop('MYSQL_PWD')` após o call.
+- **CR-03** **bcrypt 72-byte limit** contornado. Senhas arbitrariamente
+  longas agora funcionam (acentos, emoji, etc.) via pré-normalização
+  com SHA-256 antes do bcrypt. `hash_senha` e `verificar_senha`
+  aplicam a mesma transformação.
+- **CR-06** Logs do driver MySQL **sanitizados** (`database.py`).
+  `Database._sanitize_error` remove `password=`, `user=`, `host=`,
+  `port=` da mensagem antes de logar.
+- **AL-03** **CSV Injection (CVE-2014-3524)** mitigada no import
+  (`csv_import._csv_safe`). Nomes de produto que começam com `=`, `+`,
+  `-`, `@`, `\t`, `\r` são prefixados com `'` antes de gravar.
+
+### Fixed (v1.4c)
+- **CR-02** `relatorio_curva.py` agora fecha o cursor **depois** do
+  export. Antes o export da Curva ABC falhava com "Cursor closed".
+- **CR-04** Edição de produto usa `SELECT ... FOR UPDATE` dentro da
+  transação. Fim do lost-update entre gerentes editando o mesmo
+  produto ao mesmo tempo. Adicionado `ProdutoRepository.buscar_por_id_locked`.
+- **CR-05** Import CSV agora **pré-resolve fornecedores por CNPJ único**
+  antes de inserir produtos. CNPJs duplicados no mesmo CSV usam o
+  mesmo fornecedor (sem UNIQUE error + rollback total).
+- **AL-01/AL-02** `ver_historico` agora pergunta o limite ao usuário
+  (padrão 200) e inclui o **ano** no formato de data (`%d/%m/%Y %H:%M`).
+  Adiciona aviso "exibindo X de Y" quando há mais.
+- **ME-04** Curva ABC usa margem de 0.0001 para evitar misclass por
+  float (0.80 pode ser 0.79999... por precisão IEEE-754).
+- **ME-05** `editar_produto` agora exibe a `data_entrada` do produto
+  no resumo (que estava no SELECT mas era ignorada).
+- **ME-06** `listar_produtos` agora pergunta o limite ao usuário
+  (padrão 50) e avisa quando há mais produtos.
+- **ME-07** `LOG_LEVEL` agora é lido do .env pelo `setup_logging`
+  (antes era hardcoded em INFO).
+- **ME-10** `main._loop_menu` agora captura `FlowLogError` (mensagem
+  amigável) e qualquer `Exception` (logada + mensagem genérica).
+  Fim do crash do app por exception não-tratada.
+- **ME-03** `BACKUP_MAX_RETENTION` agora é lido do .env (antes
+  `MAX_BACKUPS_RELOCALES = 30` hardcoded em `backup.py`).
+
+### Changed (v1.4c)
+- **AL-04** `cadastrar_usuario.py` agora delega pra `UsuarioService`.
+  Adicionado `src/services/usuario_service.py`.
+- **AL-04** `listar_produtos.py` agora usa `ProdutoService` em vez de
+  SQL inline. Continuam com feature module fino.
+- **ME-01** Adicionados métodos públicos no `ProdutoService`:
+  `buscar(id)`, `listar_todos()`, `listar_abaixo_do_minimo()`.
+  Substituem o acesso direto a `service._produtos` pelos feature modules.
+- **BA-02** `csv_export.py` agora importa `_SQL_CURVA_ABC` no topo
+  (em vez de dentro da função). Elimina `noqa: PLC0415`.
+- **BA-06** `src/services/__init__.py` reexporta todas as 6 services
+  (Auth, Estoque, Produto, Fornecedor, Historico, Usuario).
+- **BA-08** `src/teste_insercao.py` movido para `scripts/cadastro_teste.py`
+  (era um script manual, não teste).
+- **ME-08** `README.md` reescrito: features atuais, versão, badges
+  de testes/cobertura, quick start, estrutura do projeto.
+- `produto_repository.listar_todos` agora tem `ORDER BY id ASC`
+  (antes sem ORDER BY, ordem não-determinística).
+
+### Added (v1.4c)
+- 13 testes novos (total 123, cobertura 82.3%):
+  - `tests/test_utils.py` — 3 testes CR-03 (senhas longas,
+    com acentos, realistas).
+  - `tests/test_services.py` — 3 testes (CR-04 SELECT FOR UPDATE,
+    rowcount=0, ME-01 fachada pública).
+  - `tests/test_repositories.py` — 1 teste CR-04 (buscar_por_id_locked).
+  - `tests/test_database.py` — novo arquivo, 6 testes de sanitização
+    de erros.
+- `QA_REPORT.md` — auditoria completa da v1.4b com 29 achados
+  (6 críticos, 5 altos, 10 médios, 8 baixos).
+- `scripts/cadastro_teste.py` — script de teste manual (movido de src/).
+
 ## [1.4.0] - 2026-07-12
 
 ### Added (v1.4b — Services + refactor dos feature modules)

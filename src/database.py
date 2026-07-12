@@ -80,8 +80,38 @@ class Database:
         try:
             return self._get_pool().get_connection()
         except Error as e:
-            logger.error("Erro ao obter conexão do pool: %s", e)
+            # CR-06: sanitiza mensagens de erro do MySQL antes de logar.
+            # O driver às vezes ecoa parâmetros (incluindo senha) nas
+            # exceções. Nunca logamos o erro bruto.
+            safe = self._sanitize_error(e)
+            logger.error("Erro ao obter conexão do pool: %s", safe)
             return None
+
+    @staticmethod
+    def _sanitize_error(err: Exception) -> str:
+        """CR-06: remove qualquer parâmetro sensível de mensagens do MySQL.
+
+        Substitui padrões comuns: password=***, user=***, host=***.
+        O driver MySQL Connector/Python em geral não vaza a senha, mas
+        outras exceções (ex.: `pool_name=flowlog_pool`) também não
+        precisam aparecer. Defesa em profundidade.
+        """
+        import re
+
+        msg = str(err)
+        msg = re.sub(
+            r"password\s*=\s*['\"]?[^'\"\s)]+",
+            "password=***",
+            msg,
+            flags=re.IGNORECASE,
+        )
+        msg = re.sub(
+            r"(?P<key>user|host|port|host_name)\s*=\s*['\"]?[^'\"\s)]+",
+            r"\g<key>=***",
+            msg,
+            flags=re.IGNORECASE,
+        )
+        return msg
 
     @contextmanager
     def transaction(self):

@@ -27,7 +27,18 @@ logger = get_logger(__name__)
 
 
 BACKUP_DIR = Path("backups")
-MAX_BACKUPS_RELOCALES = 30  # retenção: apaga o mais antigo além desse número
+MAX_BACKUPS_RELOCALES = 30  # retenção padrão (legado); v1.4c lê de env
+
+
+def _max_backups():
+    """ME-03: retenção lida do env (BACKUP_MAX_RETENTION), default 30.
+
+    Configurável via .env. Aceita 0 = sem retenção (não remove nada).
+    """
+    try:
+        return int(os.getenv("BACKUP_MAX_RETENTION", "30"))
+    except ValueError:
+        return 30
 
 
 # ============================================================
@@ -77,13 +88,17 @@ def fazer_backup():
     filename = BACKUP_DIR / f"flowlog_backup_{ts}.sql"
 
     creds = _ler_credenciais()
+    # CR-01: a senha é passada via env var (MYSQL_PWD) em vez de -p{senha}
+    # na linha de comando. -p{senha} aparece em 'ps aux' e em logs do SO.
+    env = os.environ.copy()
+    if creds["password"]:
+        env["MYSQL_PWD"] = creds["password"]
     cmd = [
         "mysqldump",
         "-h",
         creds["host"],
         "-u",
         creds["user"],
-        f"-p{creds['password']}",
         "--single-transaction",  # garante consistência sem lock
         "--routines",  # inclui stored procedures (preparação futura)
         "--triggers",  # inclui triggers
@@ -92,7 +107,9 @@ def fazer_backup():
 
     try:
         with open(filename, "w", encoding="utf-8") as f:
-            result = subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE, check=False)
+            result = subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE, check=False, env=env)
+        # Limpa a senha do ambiente local (defesa em profundidade)
+        env.pop("MYSQL_PWD", None)
 
         if result.returncode != 0:
             stderr = result.stderr.decode("utf-8", errors="ignore")
@@ -118,14 +135,17 @@ def fazer_backup():
 
 
 def _apagar_backups_antigos():
-    """Apaga os backups mais antigos além de MAX_BACKUPS_RELOCALES."""
+    """ME-03: apaga os backups mais antigos além de _max_backups() (env)."""
     if not BACKUP_DIR.exists():
         return
+    limite = _max_backups()
+    if limite <= 0:
+        return  # retenção desabilitada
     backups = sorted(
         BACKUP_DIR.glob("flowlog_backup_*.sql"),
         key=lambda p: p.stat().st_mtime,
     )
-    while len(backups) > MAX_BACKUPS_RELOCALES:
+    while len(backups) > limite:
         antigo = backups.pop(0)
         try:
             antigo.unlink()
@@ -212,19 +232,23 @@ def restaurar_backup(caminho=None):
         return
 
     creds = _ler_credenciais()
+    # CR-01: idem — senha via MYSQL_PWD, não em argv
+    env = os.environ.copy()
+    if creds["password"]:
+        env["MYSQL_PWD"] = creds["password"]
     cmd = [
         "mysql",
         "-h",
         creds["host"],
         "-u",
         creds["user"],
-        f"-p{creds['password']}",
         creds["database"],
     ]
 
     try:
         with open(caminho, encoding="utf-8") as f:
-            result = subprocess.run(cmd, stdin=f, stderr=subprocess.PIPE, check=False)
+            result = subprocess.run(cmd, stdin=f, stderr=subprocess.PIPE, check=False, env=env)
+        env.pop("MYSQL_PWD", None)
 
         if result.returncode != 0:
             stderr = result.stderr.decode("utf-8", errors="ignore")

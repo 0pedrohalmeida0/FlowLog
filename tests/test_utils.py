@@ -108,6 +108,29 @@ class TestBcrypt:
         assert verificar_senha("qualquer", "senha_em_claro") is False
         assert verificar_senha("qualquer", "") is False
 
+    def test_hash_suporta_senha_maior_que_72_bytes_cr03(self):
+        """CR-03: bcrypt limita 72 bytes; o pre-normalizador SHA-256
+        contorna isso. Senhas arbitrariamente longas devem funcionar.
+        """
+        senha_longa = "a" * 100  # 100 bytes, > 72
+        h = hash_senha(senha_longa)
+        assert verificar_senha(senha_longa, h) is True
+
+    def test_hash_suporta_senha_com_acentos_cr03(self):
+        """CR-03: senha com acentos e emoji (que estouram 72 bytes UTF-8)
+        deve funcionar via pre-normalização.
+        """
+        senha = "🔒" * 50  # 200 bytes em UTF-8
+        h = hash_senha(senha)
+        assert verificar_senha(senha, h) is True
+
+    def test_hash_suporta_senha_realista_cr03(self):
+        """CR-03: cenário realista de senha forte com 80+ chars."""
+        senha = "SenhaForte🔒ComMuitosEmojis🌟2024ParaSegurança123!"
+        h = hash_senha(senha)
+        assert verificar_senha(senha, h) is True
+        assert verificar_senha(senha + "x", h) is False
+
 
 # ============================================================
 # Validação de complexidade de senha

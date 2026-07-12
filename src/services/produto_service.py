@@ -123,7 +123,9 @@ class ProdutoService:
             if campos["alerta_minimo"] < 0:
                 raise ValidationError("O alerta mínimo não pode ser negativo.")
 
-        # Lê o produto atual (precisamos do snapshot_antes inteiro)
+        # Lê o produto atual (precisamos do snapshot_antes inteiro).
+        # CR-04: o snapshot_antes é só para auditoria; o que importa pra
+        # lost-update é o lock na hora do UPDATE, feito dentro da transação.
         atual = self._produtos.buscar_por_id(produto_id)
         if not atual:
             raise NotFoundError(f"Produto com ID {produto_id} não encontrado.")
@@ -132,6 +134,11 @@ class ProdutoService:
         usuario_id = usuario_id_atual()
 
         with self._produtos.transaction() as (conn, cur):
+            # CR-04: SELECT ... FOR UPDATE — bloqueia a linha até o fim
+            # da transação, impedindo o cenário de lost-update entre
+            # gerentes editando o mesmo produto simultaneamente.
+            self._produtos.buscar_por_id_locked(produto_id, conn, cur)
+
             # UPDATE
             cols = ", ".join(f"{c} = %s" for c in campos)
             valores = list(campos.values()) + [produto_id]
@@ -171,6 +178,24 @@ class ProdutoService:
             "snapshot_antes": snapshot_antes,
             "snapshot_depois": snapshot_depois,
         }
+
+    def buscar(self, produto_id: int) -> dict | None:
+        """ME-01: fachada pública para o feature module.
+
+        Substitui o uso direto de `service._produtos.buscar_por_id()`.
+        """
+        return self._produtos.buscar_por_id(produto_id)
+
+    def listar_todos(self) -> list[dict]:
+        """ME-01: fachada pública para o feature module."""
+        return self._produtos.listar_todos()
+
+    def listar_abaixo_do_minimo(self) -> list[dict]:
+        """Produtos com `quantidade <= alerta_minimo` (alerta_minimo não nulo).
+
+        Cada item: {nome, quantidade, alerta_minimo, fornecedor}.
+        """
+        return self._produtos.listar_abaixo_do_minimo()
 
     @staticmethod
     def _serializar(row) -> dict:

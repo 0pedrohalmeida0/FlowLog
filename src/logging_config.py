@@ -24,23 +24,42 @@ _LOG_DIR = os.path.join(_PROJECT_ROOT, "logs")
 _LOG_FILE = os.path.join(_LOG_DIR, "flowlog.log")
 
 
-def setup_logging(level=logging.INFO, log_to_file=True, max_bytes=10 * 1024 * 1024, backups=5):
+def _level_from_env():
+    """ME-07: lê LOG_LEVEL do env (default INFO).
+
+    Aceita: DEBUG, INFO, WARNING, ERROR, CRITICAL. Ignora inválido.
+    """
+    name = os.getenv("LOG_LEVEL", "INFO").upper().strip()
+    return getattr(logging, name, logging.INFO)
+
+
+def setup_logging(level=None, log_to_file=True, max_bytes=10 * 1024 * 1024, backups=5):
     """Configura logging com saída no console e (opcionalmente) em arquivo rotativo.
 
     Idempotente: chamadas múltiplas não duplicam handlers (usado por testes
     e reentradas).
 
     Args:
-        level: nível mínimo para o console (INFO por padrão).
+        level: nível mínimo para o console. Se None, lê de LOG_LEVEL no env
+            (default INFO).
         log_to_file: se True, adiciona RotatingFileHandler.
         max_bytes: tamanho máximo do arquivo de log antes de rotacionar.
         backups: quantidade de arquivos antigos mantidos.
     """
+    if level is None:
+        level = _level_from_env()
+
     root = logging.getLogger()
     root.setLevel(logging.DEBUG)  # captura tudo; cada handler filtra depois
 
     if root.handlers:
-        return  # já configurado, não duplica
+        # Já configurado, mas garante que o nível do console está atualizado
+        for h in root.handlers:
+            if isinstance(h, logging.StreamHandler) and not isinstance(
+                h, logging.handlers.RotatingFileHandler
+            ):
+                h.setLevel(level)
+        return
 
     # Console: nível controlado por `level`, formato curto e legível
     console_formatter = logging.Formatter(_CONSOLE_FORMAT, _DATE_FORMAT)

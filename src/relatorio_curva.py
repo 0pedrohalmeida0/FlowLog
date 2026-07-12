@@ -54,8 +54,10 @@ SELECT
     ROUND(r.total_saidas / tg.total * 100, 2)        AS percentual,
     ROUND(r.acumulado    / tg.total * 100, 2)        AS percentual_acumulado,
     CASE
-        WHEN r.acumulado / tg.total <= 0.80 THEN 'A'
-        WHEN r.acumulado / tg.total <= 0.95 THEN 'B'
+        -- ME-04: margem de 0.0001 para evitar misclass por float (0.80
+        -- pode ser 0.79999... por precisão IEEE-754 e jogar A em B)
+        WHEN r.acumulado / tg.total < 0.8001 THEN 'A'
+        WHEN r.acumulado / tg.total < 0.9501 THEN 'B'
         ELSE 'C'
     END                                              AS classificacao
 FROM ranking r
@@ -85,7 +87,8 @@ def relatorio_curva_abc():
         cursor = conexao.cursor()
         cursor.execute(_SQL_CURVA_ABC)
         resultados = cursor.fetchall()
-        cursor.close()
+        # CR-02: NÃO fechar o cursor aqui — ele é reutilizado pelo
+        # exportar_curva_abc(). Move o close() pro finally.
 
         if not resultados:
             print(
@@ -128,6 +131,8 @@ def relatorio_curva_abc():
             try:
                 from csv_export import exportar_curva_abc
 
+                # CR-02: a função refaz o execute internamente, então
+                # o cursor ainda precisa estar vivo.
                 exportar_curva_abc(cursor)
             except Exception as e:
                 logger.exception("Falha no export de Curva ABC")
@@ -136,6 +141,11 @@ def relatorio_curva_abc():
         logger.exception("Erro ao gerar Curva ABC")
         print(f"❌ Erro ao gerar relatório: {e}")
     finally:
+        # CR-02: cursor.close() depois de tudo (incluindo o export)
+        try:
+            cursor.close()
+        except Exception:
+            pass
         if conexao and conexao.is_connected():
             conexao.close()
 

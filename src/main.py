@@ -21,6 +21,7 @@ from configurar_alerta import atualizar_alerta
 from csv_import import importar_produtos_csv
 from editar_produto import editar_produto
 from entrada import entrada
+from exceptions import FlowLogError
 from gerenciar_fornecedor import listar_produtos_por_fornecedor
 from listar_produtos import alerta_estoque_baixo, listar_todos_produtos
 from logging_config import get_logger, setup_logging
@@ -153,7 +154,18 @@ def _loop_menu():
             continue
 
         _, handler = MENU_OPCOES[opcao]
-        handler()
+        # ME-10: captura erros de domínio (mensagem amigável) e qualquer
+        # exceção não-tratada (loga e mostra mensagem genérica, sem
+        # fechar o app). KeyboardInterrupt é propagado pra parar o loop.
+        try:
+            handler()
+        except FlowLogError as e:
+            print(f"\n❌ {e}")
+        except KeyboardInterrupt:
+            print("\n\n⚠️ Operação cancelada pelo usuário.")
+        except Exception as e:
+            logger.exception("Erro inesperado em '%s'", opcao)
+            print(f"\n❌ Erro inesperado: {e}")
         # Cada ação do usuário reseta o timer de inatividade
         registrar_atividade()
 

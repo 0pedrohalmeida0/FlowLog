@@ -13,6 +13,10 @@ _FILTROS_TIPO = {
     "3": "SAIDA",
 }
 
+# AL-01: limite padrão por tela. 200 = confortável para terminal de 80
+# colunas. Se o usuário quiser mais, ele informa o limite.
+LIMITE_PADRAO = 200
+
 
 def exibir_relatorio_movimentacoes():
     db = Database()
@@ -32,6 +36,18 @@ def exibir_relatorio_movimentacoes():
             print("⚠️ Opção inválida. Listando tudo.")
             tipo_filtro = None
 
+        # AL-01: perguntar limite ao usuário. Default = 200 linhas.
+        limite_input = input(
+            f"Quantas linhas mostrar? (padrão {LIMITE_PADRAO}, 0 = sem limite): "
+        ).strip()
+        try:
+            limite = int(limite_input) if limite_input else LIMITE_PADRAO
+        except ValueError:
+            print("⚠️ Valor inválido. Usando padrão de 200.")
+            limite = LIMITE_PADRAO
+        if limite < 0:
+            limite = LIMITE_PADRAO
+
         sql_parts = [
             """
             SELECT h.id, p.nome, h.tipo, h.quantidade, h.data_movimentacao,
@@ -41,37 +57,65 @@ def exibir_relatorio_movimentacoes():
             LEFT JOIN usuarios u ON h.usuario_id = u.id
             """,
         ]
-        params = ()
+        params = []
 
         if tipo_filtro:
             sql_parts.append("WHERE UPPER(h.tipo) = %s")
-            params = (tipo_filtro,)
+            params.append(tipo_filtro)
 
         sql_parts.append("ORDER BY h.data_movimentacao DESC")
+        if limite > 0:
+            sql_parts.append("LIMIT %s")
+            params.append(limite)
         sql = " ".join(sql_parts)
 
         cursor = conexao.cursor()
-        cursor.execute(sql, params)
+        cursor.execute(sql, tuple(params))
         logs = cursor.fetchall()
+
+        # AL-01: descobrir se há mais resultados do que o que mostramos
+        tem_mais = False
+        if limite > 0:
+            cursor.execute(
+                "SELECT COUNT(*) FROM historico_movimentacoes"
+                + (" WHERE UPPER(tipo) = %s" if tipo_filtro else ""),
+                (tipo_filtro,) if tipo_filtro else (),
+            )
+            total_real = cursor.fetchone()[0]
+            tem_mais = total_real > len(logs)
+        else:
+            total_real = len(logs)
 
         print("\n--- 📜 HISTÓRICO DE MOVIMENTAÇÕES (FLOWLOG) ---")
         if not logs:
             print("Nenhuma movimentação encontrada para o filtro selecionado.")
         else:
+            # AL-02: formato de data com ano (dd/mm/aaaa HH:MM) para
+            # suportar relatórios que cruzam fronteira de ano.
             print(
                 f"{'ID':<4} | {'PRODUTO':<20} | {'TIPO':<8} | {'QTD':<5} | "
-                f"{'USUÁRIO':<12} | {'DATA':<16}"
+                f"{'USUÁRIO':<12} | {'DATA':<18}"
             )
             print("-" * 80)
             for log in logs:
                 id_log, nome_p, tipo, qtd, data, usuario = log
-                data_formatada = data.strftime("%d/%m %H:%M")
+                data_formatada = data.strftime("%d/%m/%Y %H:%M")
                 print(
                     f"{id_log:<4} | {nome_p:<20} | {tipo:<8} | {qtd:<5} | "
-                    f"{usuario:<12} | {data_formatada:<16}"
+                    f"{usuario:<12} | {data_formatada:<18}"
                 )
             print("-" * 80)
-            logger.info("Histórico exibido: filtro=%s linhas=%d", escolha, len(logs))
+            if tem_mais:
+                print(
+                    f"⚠️ Exibindo {len(logs)} de {total_real} movimentações. "
+                    f"Aumente o limite para ver mais."
+                )
+            logger.info(
+                "Histórico exibido: filtro=%s linhas=%d total=%d",
+                escolha,
+                len(logs),
+                total_real,
+            )
 
             # Oferece export ao final
             opt = input("\nExportar este relatório para CSV? (S/N): ").strip().upper()

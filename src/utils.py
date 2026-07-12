@@ -1,5 +1,6 @@
 """Funções utilitárias: CNPJ, hash de senha, validação de complexidade e log."""
 
+import hashlib
 import re
 
 import bcrypt
@@ -70,6 +71,21 @@ def formatar_cnpj(cnpj):
 MIN_SENHA_LEN = 6
 
 
+# CR-03: bcrypt impõe limite de 72 bytes. Senhas longas (com acentos
+# ou emoji) estouram e geram ValueError. Pré-normalizamos com SHA-256
+# (que devolve 32 bytes hex) para aceitar senhas arbitrariamente longas
+# mantendo bcrypt como fator de trabalho (work factor).
+# A mesma transformação é usada em hash e em verify.
+def _pre_normalizar_senha(senha_plana: str) -> bytes:
+    """Reduz a senha para 32 bytes (SHA-256 hex) antes de passar ao bcrypt.
+
+    bcrypt opera com no máximo 72 bytes. Se a senha exceder, usamos
+    SHA-256 como pré-normalização: o hash é determinístico, então o mesmo
+    pré-processamento em hash_senha/verificar_senha dá match.
+    """
+    return hashlib.sha256(senha_plana.encode("utf-8")).hexdigest().encode("ascii")
+
+
 def hash_senha(senha_plana):
     """Gera o hash bcrypt da senha em texto puro.
 
@@ -77,7 +93,7 @@ def hash_senha(senha_plana):
     """
     if not senha_plana:
         raise ValueError("Senha não pode ser vazia.")
-    return bcrypt.hashpw(senha_plana.encode("utf-8"), bcrypt.gensalt())
+    return bcrypt.hashpw(_pre_normalizar_senha(senha_plana), bcrypt.gensalt())
 
 
 def verificar_senha(senha_plana, hash_armazenado):
@@ -97,7 +113,7 @@ def verificar_senha(senha_plana, hash_armazenado):
 
     if hash_str.startswith("$2"):
         try:
-            return bcrypt.checkpw(senha_plana.encode("utf-8"), hash_str.encode("utf-8"))
+            return bcrypt.checkpw(_pre_normalizar_senha(senha_plana), hash_str.encode("utf-8"))
         except (ValueError, TypeError):
             logger.exception("Falha ao verificar hash bcrypt")
             return False

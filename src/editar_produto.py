@@ -31,8 +31,9 @@ def _escolher_produto(service: ProdutoService) -> int | None:
         print("❌ Erro: o ID não pode ser negativo.")
         return None
     if id_produto == 0:
-        # Lista e pede de novo
-        produtos = service._produtos.listar_todos()  # uso interno intencional
+        # Lista e pede de novo. ME-01: usar método público do service
+        # em vez de acessar `service._produtos` diretamente.
+        produtos = service.listar_todos()
         if not produtos:
             print("⚠️ Nenhum produto cadastrado.")
             return None
@@ -60,7 +61,7 @@ def editar_produto():
 
     # Mostra resumo
     try:
-        atual = service._produtos.buscar_por_id(produto_id)
+        atual = service.buscar(produto_id)
     except Exception as e:
         logger.exception("Erro ao buscar produto %s", produto_id)
         print(f"❌ Erro ao buscar produto: {e}")
@@ -78,6 +79,14 @@ def editar_produto():
     print(
         f"  Alerta mín.:   {atual['alerta_minimo'] if atual['alerta_minimo'] is not None else '(sem alerta)'}"
     )
+    # ME-05: mostra a data de entrada (que está no SELECT mas era ignorada)
+    data_entrada = atual.get("data_entrada")
+    if data_entrada:
+        if hasattr(data_entrada, "strftime"):
+            data_str = data_entrada.strftime("%d/%m/%Y %H:%M")
+        else:
+            data_str = str(data_entrada)
+        print(f"  Data entrada:  {data_str}")
 
     # Escolha do campo
     print("\nQual campo deseja editar?")
