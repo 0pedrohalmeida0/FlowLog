@@ -12,6 +12,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).*
 
 ## [1.3.0] - 2026-07-12
 
+### Added (v1.3b — CSV Import / Export)
+- **`src/csv_export.py`** — exporta inventário, histórico (filtrado por tipo) e Curva ABC para CSV. Padrão BR: encoding `utf-8-sig` (BOM, abre direto no Excel), separador `;`, decimais com vírgula, quebras de linha `\r\n`. Cada relatório pergunta ao final se o usuário quer exportar.
+- **`src/csv_import.py`** — importa produtos em massa a partir de CSV. Formato esperado: `nome,quantidade,preco_custo,fornecedor_cnpj,alerta_minimo` (cabeçalho obrigatório, `alerta_minimo` opcional). Aceita separador `;` ou `,` (auto-detecta) e decimais com `.` ou `,` (auto-converte). Valida CNPJ por linha; pula inválidas com aviso; confirma antes de inserir. Fornecedores inexistentes são cadastrados automaticamente.
+- **Opção 11 no menu** — "Importar Produtos de CSV" (nível 2).
+- **Listar Produtos, Ver Histórico, Curva ABC** agora oferecem export ao final de cada relatório.
+
+### Notes (PT)
+- v1.3b fecha o segundo bloco de feature mais pedido em qualquer demo: "posso abrir no Excel?" e "posso cadastrar em massa?". Export é BR-friendly de propósito (encoding BOM, separador `;`) — abre direto no Excel brasileiro sem precisar configurar nada.
+- Import é defensivo: linhas inválidas são reportadas e puladas, nada é inserido sem confirmação explícita do usuário. Fornecedor novo vira `(importado CSV) CNPJ` na razão social — fácil de identificar e renomear depois.
+
+### Notes (EN)
+- v1.3b closes the second most-requested feature in any demo: "can I open it in Excel?" and "can I bulk-register?". Export is BR-friendly on purpose (BOM encoding, `;` separator) — opens directly in Brazilian Excel without configuration.
+- Import is defensive: invalid lines are reported and skipped, nothing is inserted without explicit user confirmation. New suppliers become `(imported CSV) CNPJ` as the legal name — easy to identify and rename later.
+
 ### Added (v1.3a — Edição de produtos)
 - **Edição de produto** no menu principal (opção 10). Permite editar nome, preço de custo e alerta mínimo.
 - **Snapshot de auditoria** em nova tabela `produtos_historico_edicoes`. Cada edição grava o produto antes e depois em JSON, com referência ao usuário que editou.

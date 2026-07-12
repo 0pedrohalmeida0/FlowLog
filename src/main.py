@@ -17,6 +17,7 @@ from auth import requer_nivel
 from cadastrar_usuario import cadastrar_usuario
 from cadastro_interativo import cadastrar_produto_interativo
 from configurar_alerta import atualizar_alerta
+from csv_import import importar_produtos_csv
 from editar_produto import editar_produto
 from entrada import entrada
 from gerenciar_fornecedor import listar_produtos_por_fornecedor
@@ -80,6 +81,11 @@ def op_editar_produto():
     editar_produto()
 
 
+@requer_nivel(2)
+def op_importar_csv():
+    importar_produtos_csv()
+
+
 # Tabela de opções do menu: chave -> (rótulo, handler)
 # Opções 1 e 5 não têm @requer_nivel (acessíveis a qualquer usuário logado).
 MENU_OPCOES = {
@@ -93,6 +99,7 @@ MENU_OPCOES = {
     "8": ("Configurar Alerta de Estoque", op_configurar_alerta),
     "9": ("Relatório de Curva ABC (Giro de Estoque)", op_relatorio_curva),
     "10": ("Editar Produto", op_editar_produto),
+    "11": ("Importar Produtos de CSV", op_importar_csv),
 }
 
 

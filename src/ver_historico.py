@@ -53,7 +53,6 @@ def exibir_relatorio_movimentacoes():
         cursor = conexao.cursor()
         cursor.execute(sql, params)
         logs = cursor.fetchall()
-        cursor.close()
 
         print("\n--- 📜 HISTÓRICO DE MOVIMENTAÇÕES (FLOWLOG) ---")
         if not logs:
@@ -73,6 +72,18 @@ def exibir_relatorio_movimentacoes():
                 )
             print("-" * 80)
             logger.info("Histórico exibido: filtro=%s linhas=%d", escolha, len(logs))
+
+            # Oferece export ao final
+            opt = input("\nExportar este relatório para CSV? (S/N): ").strip().upper()
+            if opt == "S":
+                try:
+                    from csv_export import exportar_historico
+
+                    # Re-executa a query para o export (cursor foi consumido pelo fetchall)
+                    exportar_historico(cursor, tipo_filtro)
+                except Exception as e:
+                    logger.exception("Falha no export de histórico")
+                    print(f"❌ Erro ao exportar: {e}")
     except Exception as e:
         logger.exception("Erro ao gerar relatório de movimentações")
         print(f"❌ Erro ao gerar relatório: {e}")

@@ -121,6 +121,17 @@ def relatorio_curva_abc():
             contagem.get("B", 0),
             contagem.get("C", 0),
         )
+
+        # Oferece export ao final
+        opt = input("\nExportar Curva ABC para CSV? (S/N): ").strip().upper()
+        if opt == "S":
+            try:
+                from csv_export import exportar_curva_abc
+
+                exportar_curva_abc(cursor)
+            except Exception as e:
+                logger.exception("Falha no export de Curva ABC")
+                print(f"❌ Erro ao exportar: {e}")
     except Exception as e:
         logger.exception("Erro ao gerar Curva ABC")
         print(f"❌ Erro ao gerar relatório: {e}")
