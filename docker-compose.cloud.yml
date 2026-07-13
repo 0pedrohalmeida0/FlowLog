@@ -1,0 +1,56 @@
+# docker-compose.cloud.yml — FlowLog Cloud v2.0 stack local
+#
+# Como usar:
+#   docker compose -f docker-compose.cloud.yml up --build
+#
+# Stack:
+#   - postgres: PostgreSQL 15
+#   - api: backend FastAPI em :8000
+#   - frontend: dev mode (Vite) em :5173 (profil opcional)
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: flowlog-postgres
+    environment:
+      POSTGRES_USER: flowlog
+      POSTGRES_PASSWORD: flowlog
+      POSTGRES_DB: flowlog
+    ports:
+      - "5432:5432"
+    volumes:
+      - flowlog_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flowlog -d flowlog"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.cloud
+    container_name: flowlog-api
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: flowlog
+      DB_PASSWORD: flowlog
+      DB_NAME: flowlog
+      JWT_SECRET: "trocar-em-prod-com-secrets.token_urlsafe(32)"
+      AMBIENTE: dev
+      CORS_ORIGINS: '["http://localhost:5173"]'
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      uvicorn cloud.main:app
+        --host 0.0.0.0
+        --port 8000
+        --reload
+
+volumes:
+  flowlog_pgdata:
+    name: flowlog_cloud_pgdata

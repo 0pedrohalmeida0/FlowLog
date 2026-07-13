@@ -3,7 +3,7 @@
 # ser robusto quando o pytest roda de fora do diretório do projeto.
 
 [run]
-source = src
+source = src, cloud
 omit =
     */teste_insercao.py
     # Módulos DB-dependent: testados manualmente ou em suite de integração
@@ -26,6 +26,15 @@ omit =
     */csv_import.py
     */backup.py
     */editar_produto.py
+    # v1.5.0 — empacotamento e wizard (interativos, testados via subprocess/E2E)
+    */setup_wizard.py
+    */auto_update.py
+    */__main__.py
+    # v1.6 — frontend dist e entrypoint CLI
+    */branding.py
+    */licenca.py
+    # v2.0 — billing é stub (placeholder), entrypoint é CLI
+    cloud/billing/*
 
 [report]
 exclude_lines =

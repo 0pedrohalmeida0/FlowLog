@@ -10,6 +10,159 @@ and this project adheres to [Semantic Versioning](https://semver.org/).*
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-07-13
+
+### Added (v2.0 — FlowLog Cloud MVP)
+
+**Stack & estrutura**
+- Pacote `src/cloud/` (Cloud) completamente separado de `src/` (Licença)
+- Backend FastAPI dedicado: `cloud/main.py` (entry point, lifespan, CORS)
+- SQLAlchemy 2.0 async (não bloqueante) + Pydantic Settings (`config.py`)
+- Pool de conexões PostgreSQL com `pool_pre_ping` (detecta conexão morta)
+- Entry point `flowlog-cloud` no `pyproject.toml`
+
+**Multi-tenancy real**
+- `tenant_id` em cada row de negócio (TenantScopedModel mixin)
+- 6 models: Tenant, User, Produto, Fornecedor, HistoricoMovimentacao, AuditoriaAcao
+- Todos com UUID PK + `criado_em` + `atualizado_em` + indexes em FK
+- `AuditoriaAcao` com JSONB no Postgres, JSON fallback em SQLite/MySQL
+- `lazy="raise"` em relationships (impede lazy load async implícito)
+
+**Auth JWT**
+- `python-jose` + bcrypt 12 rounds
+- Access token 30min + refresh token 30d
+- Tokens carregam `user_id`, `tenant_id`, `email`
+- `get_current_user` decodifica JWT, busca User, anexa `tenant_id` em `request.state`
+- `require_admin` decorator (nível ADMIN)
+
+**Routers (11 endpoints sob `/v1`)**
+- `POST /v1/auth/signup` — onboarding self-service (14d trial)
+- `POST /v1/auth/login` — email + senha
+- `POST /v1/auth/refresh` — renova access token
+- `GET /v1/auth/me` — dados do tenant
+- `GET/POST /v1/produtos` — listar/criar
+- `GET/PATCH /v1/produtos/{id}` — buscar/editar
+- `POST /v1/produtos/{id}/entrada` — entrada com SELECT FOR UPDATE
+- `POST /v1/produtos/{id}/saida` — saída (valida estoque)
+- `GET /v1/dashboard/resumo` — KPIs (totais, alertas, mês)
+- `GET /v1/health` — health check
+
+**Billing (stub)**
+- 3 planos: Free (R$ 0, 1 user, 100 prods) / Pro (R$ 99, 5 users, ilimitado) / Business (R$ 299, 50 users, API+white-label)
+- Interface `cloud/billing/plans.py` pronta pra trocar pra Stripe/ASAAS na v2.1
+
+**Frontend React 18 + Vite 5**
+- `src/cloud/frontend/` — SPA completo
+- TailwindCSS 3 com paleta `flowlog-primary` (#1f6feb)
+- React Router 6 (rotas privadas com `<PrivateRoute>`)
+- 4 páginas: Login, Signup, Dashboard, Produtos
+- Dashboard com cards de KPI (totais, alertas, movimentações)
+- Produtos: listar, criar, editar inline, entrada/saída
+- Client API em `lib/api.js` com proxy Vite → backend
+- Auth tokens em `localStorage` (access + refresh)
+
+**DevOps**
+- `Dockerfile.cloud` multi-stage (build Node → runtime Python)
+- `docker-compose.cloud.yml` (Postgres 15 + API + dev mode)
+- Healthcheck no container
+- Swagger UI automático em `/docs`
+
+**Documentação**
+- `docs/COMO_RODAR_CLOUD.md` — guia completo (Docker + manual)
+- `src/cloud/frontend/README.md` — como rodar o frontend
+
+**Testes**
+- 22 testes novos em `tests/test_cloud.py` (auth, produtos, dashboard, multi-tenant, JWT)
+- Testa isolamento multi-tenant (Tenant A não vê Tenant B)
+- 18 testes em `tests/test_v1_6_gaps.py` (repositórios e services v1.6)
+- **240 testes totais, 0 falhas, 71.85% cobertura** (≥ 70% fail-under)
+
+### Decisão estratégica (v2.0)
+
+Cloud NÃO é a Licença rodando na web. São **2 produtos distintos** com
+diferenciais exclusivos (ver `ROADMAP.md`):
+
+| | Licença (v1.6) | Cloud (v2.0) |
+|---|---|---|
+| Dados | locais (MySQL) | cloud (Postgres multi-tenant) |
+| Auth | HMAC token | JWT |
+| Multi-tenant | `empresa_id` N:N | `tenant_id` row-level |
+| Billing | licença 1x | assinatura recorrente |
+| Mobile | não | PWA (v2.1) |
+| Update | wizard / manual | auto (v2.1) |
+
+**Exclusivos da Licença (v1.6)**: offline, dados locais, hardware (ECF/SAT),
+NFe A1 local, source-available, volume ilimitado, air-gapped, conectores
+SQL Server/Oracle/SAP/TOTVS.
+
+**Exclusivos do Cloud (v2.0+)**: zero install, auto-update, PWA mobile,
+integrações web (Zapier/Make), e-mail/SMS/push nativo, self-service signup,
+white-label completo pra revenda, IA embutida, real-time, marketplace.
+
+### O que falta pra v2.1 (Cloud GA)
+
+- [ ] Stripe global + ASAAS BR (billing recorrente real)
+- [ ] E-mail transacional (Resend/SendGrid) — welcome, trial expira, fatura
+- [ ] "Esqueci a senha" via e-mail
+- [ ] PWA + mobile (offline, push notifications)
+- [ ] Painel admin global (MRR, churn, tenants ativos)
+- [ ] Integrações nativas (Tiny, Bling, Shopify, Zapier, Make)
+- [ ] White-label completo pra revenda
+- [ ] Marketing site `flowlog.app` (landing + pricing)
+- [ ] CI/CD no GitHub Actions
+- [ ] Logs centralizados (Sentry + PostHog)
+- [ ] SSO (Google, Microsoft)
+- [ ] Deploy: Fly.io ou Render + Cloudflare CDN
+- [ ] Status page
+
+## [1.6.0] - 2026-07-13
+
+### Added (v1.6 — FlowLog Licença + Premium)
+- **Multi-filial / multi-CNPJ**:
+  - `migrations/v1.5_to_v1.6.sql` (migration com backfill) + `schema.sql` atualizado (fresh install)
+  - Tabela `empresas` (id, cnpj, razao_social, nome_fantasia, ativa)
+  - Tabela `usuarios_empresas` (N:N usuário↔empresa com `nivel_empresa`)
+  - `empresa_id` em produtos, fornecedores, historico_movimentacoes, produtos_historico_edicoes
+  - `src/repositories/empresa_repository.py` + `src/services/empresa_service.py`
+  - `session.setar_empresa_atual()` / `empresa_atual()` / `nivel_empresa_atual()`
+  - Decorator `@requer_nivel_empresa(n)` (paralelo ao `@requer_nivel` global)
+  - `ProdutoService.buscar()` / `listar_todos()` / `listar_abaixo_do_minimo()` filtram por `empresa_id` automaticamente
+  - `EstoqueService.registrar_entrada/saida()` checa `empresa_id` no SELECT FOR UPDATE
+- **Audit log avançado**:
+  - Tabela `auditoria_acoes` (BIGINT, JSON payload, ip, user_agent, retenção configurável)
+  - Tabela `config_sistema` (chave/valor para `audit_retencao_dias`)
+  - `src/repositories/auditoria_repository.py` com `registrar()` / `listar()` / `limpar_antigas()`
+  - `src/audit.py`: decorator `@audit(acao, recurso)` + `audit_acao_direta()`
+  - Decorator captura usuario_id, empresa_id, ip, user_agent automaticamente
+  - Falha de audit NÃO quebra a operação (log warning, segue)
+- **API REST local (FastAPI)** (`src/api/`):
+  - `src/api/auth.py`: token Bearer HMAC (`fl_<user>_<nonce>_<sig>`)
+  - `src/api/server.py`: app FastAPI com 11 endpoints sob `/v1`
+    - `GET /v1/health` — health check
+    - `GET/POST /v1/empresas` — listar/cadastrar empresas
+    - `GET/POST /v1/produtos` — listar/cadastrar produtos
+    - `GET/PATCH /v1/produtos/{id}` — buscar/editar
+    - `POST /v1/produtos/{id}/entrada` / `/saida` — movimentação
+    - `GET /v1/movimentacoes` — histórico com filtros
+  - Auth via `Authorization: Bearer <token>`
+  - Multi-tenant via header `X-FlowLog-Empresa: <id>`
+  - OpenAPI/Swagger UI em `/docs` automático
+  - CLI: `flowlog-api --port 8000 --gerar-token USER`
+  - Endpoints auditam automaticamente (vai pra `auditoria_acoes`)
+- **White-label** (`src/branding.py`):
+  - Lê `branding.json` em `%APPDATA%/FlowLog/` (Windows) ou `~/.config/flowlog/` (Linux)
+  - `empresa_display`, `cor_primaria`, `cor_secundaria`, `logo_path`, `relatorio_rodape`
+  - `aplicar_rodape(texto)` adiciona rodapé customizado em relatórios
+  - Defaults (FlowLog genérico) se arquivo não existir
+- **17 testes novos** (total 195, cobertura 82%):
+  - `tests/test_v1_6.py` — session multi-filial, decorator `@requer_nivel_empresa`, audit, API auth, branding
+  - Atualizados: `test_repositories.py` (empresa_id em criar/inserir), `test_services.py` (EstoqueService com empresa_id)
+
+### Migration
+- Fresh install: rodar `schema.sql` (já inclui tudo de v1.6)
+- Upgrade v1.5 → v1.6: rodar `mysql -u root -p flowlog < migrations/v1.5_to_v1.6.sql`
+- Backfill automático: empresa "Padrão" (id=1) é criada, dados legados migrados
+
 ## [1.5.0] - 2026-07-13
 
 ### Added (v1.5 — FlowLog Licença MVP)

@@ -1,0 +1,45 @@
+# FlowLog Cloud v2.0 — Dockerfile multi-stage
+# Build: docker build -f Dockerfile.cloud -t flowlog/cloud:2.0.0 .
+# Run:   docker run -p 8000:8000 --env-file .env flowlog/cloud:2.0.0
+
+# ============ Stage 1: build (frontend React) ============
+FROM node:20-alpine AS frontend-build
+WORKDIR /web
+COPY src/cloud/frontend/package*.json ./
+RUN npm install --no-audit --no-fund
+COPY src/cloud/frontend/ ./
+RUN npm run build
+# saída em /web/dist
+
+# ============ Stage 2: runtime (backend + serve frontend) ============
+FROM python:3.11-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+# Dependências de sistema (psycopg2 precisa libpq, gcc pra build de alguns)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        gcc libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Instala deps Python
+COPY pyproject.toml ./
+COPY src/ ./src/
+COPY migrations/ ./migrations/ 2>/dev/null || true
+COPY docs/ ./docs/ 2>/dev/null || true
+RUN pip install --no-cache-dir .
+
+# Copia o frontend buildado (vai ser servido pelo FastAPI ou Nginx)
+COPY --from=frontend-build /web/dist /app/web/dist
+
+EXPOSE 8000
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/v1/health')" || exit 1
+
+# Roda uvicorn
+CMD ["uvicorn", "cloud.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]

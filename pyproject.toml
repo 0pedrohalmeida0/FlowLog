@@ -42,15 +42,25 @@ dependencies = [
     "fastapi>=0.100.0",
     "uvicorn>=0.23.0",
     "pydantic>=2.0.0",
+    # v2.0 — Cloud
+    "sqlalchemy[asyncio]>=2.0",
+    "asyncpg>=0.29",
+    "alembic>=1.13",
+    "python-jose[cryptography]>=3.3",
+    "python-multipart>=0.0.7",
+    "pydantic-settings>=2.0",
+    "email-validator>=2.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=7.4",
     "pytest-cov>=4.1",
+    "pytest-asyncio>=0.23",
     "ruff>=0.1.0",
     "black>=23.0.0",
     "mypy>=1.7.0",
+    "httpx>=0.25",
 ]
 build = [
     "pyinstaller>=6.0",
@@ -61,8 +71,10 @@ build = [
 flowlog = "src.__main__:main"
 # Versão CLI pura (pula wizard, requer .env pronto)
 flowlog-cli = "src.main:menu"
-# v1.6 — API REST local
+# v1.6 — API REST local (Licença on-premise)
 flowlog-api = "src.api.server:main"
+# v2.0 — Cloud
+flowlog-cloud = "cloud.main:main"
 
 [project.urls]
 Homepage = "https://github.com/0pedrohalmeida0/FlowLog"
@@ -85,6 +97,7 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+asyncio_mode = "auto"
 addopts = [
     "-ra",
     "--strict-markers",
