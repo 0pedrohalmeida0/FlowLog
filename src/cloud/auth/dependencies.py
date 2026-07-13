@@ -1,4 +1,4 @@
-"""Dependencies de auth (v2.0 Cloud)."""
+"""Dependencies de auth (v2.1 Cloud)."""
 
 from typing import Annotated
 
@@ -21,9 +21,9 @@ async def get_current_user(
 ) -> User:
     """Decodifica JWT, busca User, anexa tenant_id ao request state.
 
-    Qualquer router que dependa de `current_user` recebe:
-        - User (do banco, com tenant_id)
-        - request.state.tenant_id (cache pra não precisar pegar do User)
+    Para super_admin, tenant_id aponta pro PRÓPRIO user (não pra nenhum tenant
+    real). Endpoints de tenant devem checar `user.tenant_id` E o `tenant_id`
+    do request. Endpoints admin só checam `user.super_admin`.
     """
     if credentials is None:
         raise HTTPException(
@@ -50,10 +50,10 @@ async def get_current_user(
     if user is None or not user.ativo:
         raise HTTPException(status_code=401, detail="Usuário não encontrado ou inativo")
 
-    # Cache no request pra não precisar pegar do User sempre
     request.state.tenant_id = user.tenant_id
     request.state.user_id = user.id
     request.state.user_email = user.email
+    request.state.super_admin = user.super_admin
 
     return user
 
@@ -67,9 +67,29 @@ async def get_tenant_id(request: Request) -> str:
 
 
 async def require_admin(user: Annotated[User, Depends(get_current_user)]) -> User:
-    """Decorator: exige nível ADMIN (3)."""
+    """Decorator: exige nível ADMIN (3) DENTRO do tenant."""
     from cloud.models import NivelAcesso
 
     if user.nivel_acesso != NivelAcesso.ADMIN:
         raise HTTPException(status_code=403, detail="Acesso restrito a admins")
+    return user
+
+
+async def require_super_admin(user: Annotated[User, Depends(get_current_user)]) -> User:
+    """Decorator: exige super_admin global (operador do SaaS, não cliente).
+
+    Super admins:
+        - Veem TODOS os tenants
+        - Podem suspender/desativar contas
+        - Podem criar/marcar faturas
+        - Acessam /admin/*
+
+    Tenants (clientes) NÃO devem ser super_admin. Pra escalar essa
+    permissão, edite diretamente o banco ou crie um script CLI.
+    """
+    if not user.super_admin:
+        raise HTTPException(
+            status_code=403,
+            detail="Acesso restrito a operadores do FlowLog (super admin)",
+        )
     return user

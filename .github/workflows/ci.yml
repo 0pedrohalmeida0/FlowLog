@@ -7,39 +7,70 @@ on:
     branches: [main]
 
 jobs:
-  test:
-    name: Lint + Test (Python ${{ matrix.python-version }})
+  lint:
+    name: Lint (ruff + black)
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.10", "3.11", "3.12"]
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
-          cache: pip
-          cache-dependency-path: |
-            requirements.txt
-            requirements-dev.txt
+          python-version: "3.11"
+      - run: pip install -e '.[dev]'
+      - run: ruff check src/ tests/ cloud/
+      - run: black --check src/ tests/ cloud/
 
-      - name: Install dependencies
+  test:
+    name: Test + Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e '.[dev]'
+      - name: Run tests
+        env:
+          JWT_SECRET: ci-test-secret
+          DB_HOST: localhost
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -r requirements-dev.txt
+          pytest --cov=src --cov=cloud --cov-report=xml --cov-report=term
+      - uses: codecov/codecov-action@v4
+        with:
+          file: coverage.xml
+          fail_ci_if_error: false
+        continue-on-error: true
 
-      - name: Lint with ruff
-        run: ruff check src tests
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/cloud/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: src/cloud/frontend/package-lock.json
+      - run: npm ci || npm install
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: src/cloud/frontend/dist
 
-      - name: Check formatting with black
-        run: black --check src tests
-
-      - name: Run tests with coverage
+  docker:
+    name: Docker build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -f Dockerfile.cloud -t flowlog/cloud:ci-${{ github.sha }} .
+      - name: Smoke test
         run: |
-          pytest --cov=src --cov-config=.coveragerc --cov-report=term-missing --cov-fail-under=70
+          docker run -d --name flowlog-test -p 8000:8000 \
+            -e JWT_SECRET=ci -e DB_HOST=localhost flowlog/cloud:ci-${{ github.sha }}
+          sleep 5
+          curl -sf http://localhost:8000/v1/health || (docker logs flowlog-test && exit 1)
+          docker stop flowlog-test

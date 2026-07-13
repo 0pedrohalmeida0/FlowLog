@@ -52,6 +52,20 @@ class Settings(BaseSettings):
     smtp_password: str | None = None
     email_from: str = "FlowLog <noreply@flowlog.app>"
 
+    # --- Google SSO (v2.1: grátis) ---
+    # Client ID do Google Cloud Console (OAuth Web).
+    # Vazio = Google SSO desabilitado.
+    google_client_id: str | None = None
+
+    # --- Super admin seed (v2.1) ---
+    # Email criado como super_admin no primeiro startup (cria também
+    # um tenant "FlowLog Ops" pra organizar).
+    super_admin_email: str | None = None
+    super_admin_senha: str | None = None
+
+    # --- Sentry (v2.1: grátis até 5k eventos/mês) ---
+    sentry_dsn: str | None = None
+
     @property
     def database_url_async(self) -> str:
         return (

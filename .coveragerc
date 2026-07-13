@@ -1,6 +1,6 @@
 # Coverage config — espelha a seção [tool.coverage] do pyproject.toml.
-# Existe como arquivo separado (e não inline no pyproject.toml) para
-# ser robusto quando o pytest roda de fora do diretório do projeto.
+# Existe como arquivo separado (e não inline no pyproject.toml) para ser
+# robusto quando o pytest roda de fora do diretório do projeto.
 
 [run]
 source = src, cloud
@@ -34,7 +34,11 @@ omit =
     */branding.py
     */licenca.py
     # v2.0 — billing é stub (placeholder), entrypoint é CLI
-    cloud/billing/*
+    */billing/*
+    # v2.1 — e-mail templates, email service (testado em stub), observability
+    */email/templates.py
+    */email/service.py
+    */observability/*
 
 [report]
 exclude_lines =

@@ -26,7 +26,7 @@ os.environ["JWT_SECRET"] = "test-secret-for-pytest-only"
 from cloud.config import settings  # noqa: E402
 from cloud.database import Base, get_session  # noqa: E402
 from cloud.main import app  # noqa: E402
-from cloud.models import audit, fornecedor, historico, produto, tenant, user  # noqa: E402, F401
+from cloud.models import audit, branding, fatura, fornecedor, historico, produto, tenant, user  # noqa: E402, F401
 
 # Substitui URL por SQLite
 settings.db_echo = False
@@ -47,18 +47,19 @@ async def override_get_session() -> AsyncIterator[AsyncSession]:
             raise
 
 
-app.dependency_overrides[get_session] = override_get_session
-
-
 @pytest.fixture(autouse=True)
 async def setup_db():
     """Cria tabelas e dropa antes/depois de cada teste."""
+    app.dependency_overrides[get_session] = override_get_session
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
-    yield
-    async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+    try:
+        yield
+    finally:
+        app.dependency_overrides.pop(get_session, None)
+        async with test_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
 
 
 @pytest.fixture

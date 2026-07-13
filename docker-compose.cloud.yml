@@ -1,12 +1,14 @@
-# docker-compose.cloud.yml — FlowLog Cloud v2.0 stack local
+# docker-compose.cloud.yml — FlowLog Cloud v2.1 stack local
 #
 # Como usar:
 #   docker compose -f docker-compose.cloud.yml up --build
 #
 # Stack:
 #   - postgres: PostgreSQL 15
+#   - mailpit: SMTP capture (1025) + web UI (8025) — vê e-mails em dev
 #   - api: backend FastAPI em :8000
-#   - frontend: dev mode (Vite) em :5173 (profil opcional)
+#
+# Em dev, vê e-mails enviados em http://localhost:8025
 
 services:
   postgres:
@@ -26,6 +28,17 @@ services:
       timeout: 3s
       retries: 5
 
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: flowlog-mailpit
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+
   api:
     build:
       context: .
@@ -39,12 +52,24 @@ services:
       DB_NAME: flowlog
       JWT_SECRET: "trocar-em-prod-com-secrets.token_urlsafe(32)"
       AMBIENTE: dev
-      CORS_ORIGINS: '["http://localhost:5173"]'
+      CORS_ORIGINS: '["http://localhost:5173", "http://localhost:8025"]'
+      # Email via Mailpit (v2.1: grátis self-hosted)
+      EMAIL_PROVIDER: smtp
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      SMTP_USER: ""
+      SMTP_PASSWORD: ""
+      EMAIL_FROM: "FlowLog <noreply@flowlog.local>"
+      # Seed super admin
+      SUPER_ADMIN_EMAIL: admin@flowlog.local
+      SUPER_ADMIN_SENHA: trocarnoprod
     ports:
       - "8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     command: >
       uvicorn cloud.main:app
         --host 0.0.0.0

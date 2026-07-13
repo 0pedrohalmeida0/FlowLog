@@ -1,0 +1,56 @@
+# FlowLog Cloud — Fly.io config (v2.1)
+# Plano free: 3 shared VMs, 256MB RAM cada. Suficiente pra ~50-100 tenants.
+# Como deployar:
+#   1. Instalar flyctl: curl -L https://fly.io/install.sh | sh
+#   2. fly auth signup (cria conta grátis)
+#   3. fly launch --no-deploy (cria app baseado neste fly.toml)
+#   4. fly postgres create (cria Postgres gerenciado; plano free = 1GB)
+#   5. fly postgres attach <db-name> (anexa DATABASE_URL no app)
+#   6. fly secrets set JWT_SECRET=$(python -c "import secrets; print(secrets.token_urlsafe(32))")
+#   7. fly secrets set SUPER_ADMIN_EMAIL=ops@flowlog.app SUPER_ADMIN_SENHA=...
+#   8. fly secrets set GOOGLE_CLIENT_ID=... (opcional, Google SSO)
+#   9. fly deploy
+
+app = "flowlog-cloud"
+primary_region = "gru"  # São Paulo (mais perto dos clientes BR)
+
+[build]
+  dockerfile = "Dockerfile.cloud"
+
+[env]
+  AMBIENTE = "prod"
+  PORT = "8000"
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 8000
+  auto_stop_machines = "stop"  # free tier: para VM após 5min sem tráfego
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    force_https = true
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 100
+    soft_limit = 80
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1
+
+[deploy]
+  strategy = "rolling"
+
+[metrics]
+  port = 8000
+  path = "/metrics"

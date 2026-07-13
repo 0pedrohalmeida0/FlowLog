@@ -1,0 +1,10 @@
+# Cloudflare Pages — redirects
+# /app/*  → backend Fly.io
+# /v1/*   → backend Fly.io
+# /docs   → backend Fly.io (Swagger)
+# /*      → frontend (SPA)
+
+/v1/*  https://flowlog-cloud.fly.dev/v1/:splat  200
+/docs  https://flowlog-cloud.fly.dev/docs  200
+/app/* https://flowlog-cloud.fly.dev/app/:splat  200
+/*     /index.html  200

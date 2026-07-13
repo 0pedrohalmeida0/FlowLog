@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { api, salvarTokens } from '../lib/api'
+import GoogleButton from '../components/GoogleButton.jsx'
 
-export default function Signup() {
+export default function Signup({ tenantSlug }) {
   const navigate = useNavigate()
   const [form, setForm] = useState({
     tenant_nome: '',
@@ -74,6 +75,15 @@ export default function Signup() {
             {loading ? 'Criando conta...' : 'Começar trial grátis'}
           </button>
         </form>
+
+        <div className="my-4 flex items-center gap-2 text-xs text-gray-500">
+          <hr className="flex-1" />
+          <span>ou</span>
+          <hr className="flex-1" />
+        </div>
+
+        <GoogleButton mode="signup" />
+
         <p className="text-center text-sm text-gray-600 mt-4">
           Já tem conta? <Link to="/login" className="text-flowlog-primary">Entrar</Link>
         </p>

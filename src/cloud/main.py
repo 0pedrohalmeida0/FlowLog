@@ -1,17 +1,4 @@
-"""FlowLog Cloud — entry point (v2.0).
-
-FastAPI app que serve:
-    - REST API sob /v1
-    - Frontend estático em /
-    - OpenAPI/Swagger em /docs
-
-Como rodar:
-    # Dev (com hot-reload):
-    uvicorn cloud.main:app --reload --port 8000
-
-    # Produção (com Gunicorn ou uvicorn workers):
-    uvicorn cloud.main:app --host 0.0.0.0 --port 8000 --workers 4
-"""
+"""FlowLog Cloud — entry point (v2.1)."""
 
 import logging
 from contextlib import asynccontextmanager
@@ -22,9 +9,13 @@ from fastapi.responses import JSONResponse
 
 from cloud.config import settings
 from cloud.database import dispose_db, init_db
-from cloud.routers import auth, dashboard, produtos
+from cloud.observability.sentry import init_sentry
+from cloud.routers import admin, auth, billing, branding, dashboard, produtos
 
 logger = logging.getLogger(__name__)
+
+# Sentry: ativa se SENTRY_DSN estiver setado (no-op caso contrário)
+init_sentry()
 
 
 @asynccontextmanager
@@ -32,7 +23,47 @@ async def lifespan(app: FastAPI):
     """Startup/shutdown do app."""
     logger.info("FlowLog Cloud v%s iniciando (ambiente=%s)", settings.versao, settings.ambiente)
     if settings.ambiente == "dev":
-        await init_db()  # dev: cria tabelas automaticamente
+        await init_db()
+
+    # Cria super admin seed se configurado
+    if settings.super_admin_email and settings.super_admin_senha:
+        from sqlalchemy import select
+        from cloud.auth.password import hash_password
+        from cloud.models import NivelAcesso, User
+        from cloud.database import session_scope
+
+        async with session_scope() as session:
+            result = await session.execute(
+                select(User).where(User.email == settings.super_admin_email)
+            )
+            existing = result.scalar_one_or_none()
+            if existing is None:
+                # Cria tenant "FlowLog Ops" + user super admin
+                from cloud.models import Tenant
+                from datetime import datetime, timezone, timedelta
+                tenant = Tenant(
+                    nome="FlowLog Ops",
+                    plano="business",  # qualquer; super admin ignora
+                    trial_expira_em=None,
+                    ativo=True,
+                )
+                session.add(tenant)
+                await session.flush()
+                user = User(
+                    tenant_id=tenant.id,
+                    email=settings.super_admin_email,
+                    username="admin",
+                    senha_hash=hash_password(settings.super_admin_senha),
+                    nivel_acesso=NivelAcesso.ADMIN,
+                    super_admin=True,
+                    ativo=True,
+                )
+                session.add(user)
+                logger.info("✅ Super admin criado: %s", settings.super_admin_email)
+            elif not existing.super_admin:
+                existing.super_admin = True
+                logger.info("✅ User %s promovido a super admin", settings.super_admin_email)
+
     yield
     await dispose_db()
     logger.info("FlowLog Cloud encerrado")
@@ -41,14 +72,14 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="FlowLog Cloud API",
     description=(
-        "API REST do FlowLog Cloud v2.0. Multi-tenant real, JWT auth, "
+        "API REST do FlowLog Cloud v2.1. Multi-tenant, JWT, white-label, "
+        "billing manual, Google SSO, painel admin global. "
         "OpenAPI/Swagger em /docs."
     ),
     version=settings.versao,
     lifespan=lifespan,
 )
 
-# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -57,15 +88,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Routers
+# Routers v2.1
 app.include_router(auth.router, prefix="/v1")
 app.include_router(produtos.router, prefix="/v1")
 app.include_router(dashboard.router, prefix="/v1")
+app.include_router(billing.router, prefix="/v1")
+app.include_router(branding.router, prefix="/v1")
+app.include_router(admin.router, prefix="/v1")
 
 
 @app.get("/v1/health", tags=["sistema"])
 def health():
-    """Health check simples."""
     return {
         "status": "ok",
         "versao": settings.versao,
@@ -73,13 +106,7 @@ def health():
     }
 
 
-# ============================================================
-# Entry point
-# ============================================================
-
-
 def main():  # pragma: no cover
-    """Entry point: `python -m src.cloud.main` ou `flowlog-cloud`."""
     import argparse
 
     parser = argparse.ArgumentParser(description="FlowLog Cloud server")

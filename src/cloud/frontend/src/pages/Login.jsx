@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { api, salvarTokens } from '../lib/api'
+import GoogleButton from '../components/GoogleButton.jsx'
 
-export default function Login() {
+export default function Login({ tenantSlug }) {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
@@ -64,6 +65,15 @@ export default function Login() {
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
+
+        <div className="my-4 flex items-center gap-2 text-xs text-gray-500">
+          <hr className="flex-1" />
+          <span>ou</span>
+          <hr className="flex-1" />
+        </div>
+
+        <GoogleButton mode="login" />
+
         <p className="text-center text-sm text-gray-600 mt-4">
           Não tem conta? <Link to="/signup" className="text-flowlog-primary">Cadastre-se</Link>
         </p>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FlowLog — Gestão de estoque simples</title>
+  <meta name="description" content="FlowLog: gestão de estoque para pequenas e médias empresas. Versão Licença (on-premise) ou Cloud (assinatura). Sem complicação." />
+  <link rel="icon" type="image/png" href="/icon-192.png" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #111827; line-height: 1.6; }
+    .hero { background: linear-gradient(135deg, #1f6feb 0%, #58a6ff 100%); color: white; padding: 80px 20px; text-align: center; }
+    .hero h1 { font-size: 3rem; margin-bottom: 16px; font-weight: 800; }
+    .hero p { font-size: 1.25rem; opacity: 0.95; max-width: 600px; margin: 0 auto 32px; }
+    .cta { display: inline-block; background: white; color: #1f6feb; padding: 14px 28px; border-radius: 8px; font-weight: 700; text-decoration: none; }
+    .cta-secondary { display: inline-block; border: 2px solid white; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; text-decoration: none; margin-left: 12px; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 60px 20px; }
+    .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 32px; }
+    .feature { padding: 24px; }
+    .feature .icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .feature h3 { font-size: 1.25rem; margin-bottom: 8px; }
+    .feature p { color: #4b5563; }
+    .pricing { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; margin-top: 40px; }
+    .plan { background: white; border: 2px solid #e5e7eb; border-radius: 12px; padding: 32px; }
+    .plan.featured { border-color: #1f6feb; transform: scale(1.05); }
+    .plan h3 { font-size: 1.5rem; }
+    .plan .price { font-size: 2.5rem; font-weight: 800; color: #1f6feb; margin: 16px 0; }
+    .plan ul { list-style: none; margin: 16px 0; }
+    .plan li { padding: 8px 0; color: #4b5563; }
+    .plan li::before { content: "✓ "; color: #2da44e; font-weight: 700; }
+    .plan button { width: 100%; background: #1f6feb; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: 600; cursor: pointer; }
+    footer { background: #111827; color: white; padding: 40px 20px; text-align: center; }
+    footer a { color: #58a6ff; }
+    @media (max-width: 600px) { .hero h1 { font-size: 2rem; } }
+  </style>
+</head>
+<body>
+  <section class="hero">
+    <h1>🌊 FlowLog</h1>
+    <p>Gestão de estoque sem complicação. Pra pequenas e médias empresas que precisam de verdade, não de ERP de 500 mil reais.</p>
+    <a href="https://app.flowlog.app/signup" class="cta">Começar grátis (14 dias)</a>
+    <a href="#pricing" class="cta-secondary">Ver planos</a>
+  </section>
+
+  <section class="container">
+    <h2 style="text-align: center; font-size: 2rem; margin-bottom: 40px;">O que tem dentro</h2>
+    <div class="features">
+      <div class="feature">
+        <div class="icon">📦</div>
+        <h3>Produtos ilimitados</h3>
+        <p>Cadastre quantos produtos quiser. Categorias, preços, alertas de estoque mínimo.</p>
+      </div>
+      <div class="feature">
+        <div class="icon">🔄</div>
+        <h3>Entradas e saídas</h3>
+        <p>Registre movimentações com 1 clique. Histórico completo, quem mexeu, quando, quanto.</p>
+      </div>
+      <div class="feature">
+        <div class="icon">📊</div>
+        <h3>Dashboard em tempo real</h3>
+        <p>KPIs: produtos em alerta, total em estoque, movimentações do mês. Tudo num lugar só.</p>
+      </div>
+      <div class="feature">
+        <div class="icon">🔐</div>
+        <h3>API REST</h3>
+        <p>Integra com seu sistema. Documentação completa em /docs. Tokens por user.</p>
+      </div>
+      <div class="feature">
+        <div class="icon">🏢</div>
+        <h3>Multi-filial</h3>
+        <p>Uma empresa, várias lojas. Cada user vê só o que precisa. Tudo na mesma conta.</p>
+      </div>
+      <div class="feature">
+        <div class="icon">🎨</div>
+        <h3>White-label (Business)</h3>
+        <p>Revenda com sua marca. Logo, cores, domínio. 100% seu.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="container" id="pricing" style="background: #f9fafb;">
+    <h2 style="text-align: center; font-size: 2rem; margin-bottom: 8px;">Planos honestos</h2>
+    <p style="text-align: center; color: #4b5563; margin-bottom: 32px;">Sem letras miúdas. Sem cobrança por usuário extra. Cancela quando quiser.</p>
+    <div class="pricing">
+      <div class="plan">
+        <h3>Free</h3>
+        <div class="price">R$ 0<span style="font-size: 1rem; color: #6b7280;">/mês</span></div>
+        <ul>
+          <li>1 usuário</li>
+          <li>Até 100 produtos</li>
+          <li>Histórico de movimentações</li>
+          <li>Dashboard básico</li>
+        </ul>
+        <button onclick="window.location='https://app.flowlog.app/signup?plano=free'">Começar grátis</button>
+      </div>
+      <div class="plan featured">
+        <h3>Pro ⭐</h3>
+        <div class="price">R$ 99<span style="font-size: 1rem; color: #6b7280;">/mês</span></div>
+        <ul>
+          <li>5 usuários</li>
+          <li>Produtos ilimitados</li>
+          <li>Multi-usuário (RBAC)</li>
+          <li>API REST</li>
+          <li>Suporte por e-mail (24h)</li>
+        </ul>
+        <button onclick="window.location='https://app.flowlog.app/signup?plano=pro'">Assinar Pro</button>
+      </div>
+      <div class="plan">
+        <h3>Business</h3>
+        <div class="price">R$ 299<span style="font-size: 1rem; color: #6b7280;">/mês</span></div>
+        <ul>
+          <li>50 usuários</li>
+          <li>Produtos ilimitados</li>
+          <li>White-label completo</li>
+          <li>API + webhooks</li>
+          <li>Suporte prioritário (4h)</li>
+        </ul>
+        <button onclick="window.location='https://app.flowlog.app/signup?plano=business'">Assinar Business</button>
+      </div>
+    </div>
+    <p style="text-align: center; margin-top: 32px; color: #4b5563;">
+      Quer versão <strong>on-premise</strong> (seus servidores, sem mensalidade)?
+      <a href="https://github.com/0pedrohalmeida0/FlowLog/releases" style="color: #1f6feb;">Baixe a Licença</a>.
+    </p>
+  </section>
+
+  <section class="container">
+    <h2 style="text-align: center; font-size: 2rem; margin-bottom: 24px;">Open source, open heart</h2>
+    <p style="text-align: center; max-width: 700px; margin: 0 auto; color: #4b5563;">
+      FlowLog é construído em Python + FastAPI + React. A versão Licença é open source
+      (MIT). O código do Cloud também é aberto, pra você auditar e confiar.
+    </p>
+    <p style="text-align: center; margin-top: 24px;">
+      <a href="https://github.com/0pedrohalmeida0/FlowLog" style="color: #1f6feb; font-weight: 600;">⭐ Ver no GitHub</a>
+    </p>
+  </section>
+
+  <footer>
+    <p>© 2026 FlowLog · <a href="https://github.com/0pedrohalmeida0/FlowLog">GitHub</a> · <a href="https://app.flowlog.app">App</a> · <a href="mailto:contato@flowlog.app">contato@flowlog.app</a></p>
+  </footer>
+</body>
+</html>

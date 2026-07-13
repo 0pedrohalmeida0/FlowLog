@@ -41,6 +41,16 @@ export const api = {
   login: (data) => request('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
   refresh: (data) => request('/auth/refresh', { method: 'POST', body: JSON.stringify(data) }),
   me: () => request('/auth/me'),
+  googleLogin: (data) => request('/auth/google/login', { method: 'POST', body: JSON.stringify(data) }),
+  googleSignup: (data) => request('/auth/google/signup', { method: 'POST', body: JSON.stringify(data) }),
+
+  // Billing
+  listarFaturas: () => request('/billing/minhas'),
+  listarFaturasPendentes: () => request('/billing/minhas/pendentes'),
+
+  // Branding
+  meuBranding: () => request('/branding/me'),
+  atualizarBranding: (data) => request('/branding/me', { method: 'PATCH', body: JSON.stringify(data) }),
 
   // Produtos
   listarProdutos: () => request('/produtos'),

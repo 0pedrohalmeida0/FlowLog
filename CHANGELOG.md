@@ -10,6 +10,115 @@ and this project adheres to [Semantic Versioning](https://semver.org/).*
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-07-13
+
+### Added (v2.1 — FlowLog Cloud GA)
+
+Tudo **gratuito** (Stripe/ASAAS/Resend/PostHog ficam pra v2.2).
+
+**Billing manual (sem Stripe/ASAAS)**
+- Model `Fatura` (PIX/boleto/transferência/cartão, status: pendente/pago/cancelado/vencido)
+- Admin gera faturas via `/v1/billing/admin/criar` (numeração `FlowLog-YYYYMM-NNNN`)
+- Admin marca como pago via `/v1/billing/admin/{id}/marcar-pago` (após PIX cair)
+- Tenant vê próprias faturas em `/v1/billing/minhas` e pendentes em `/minhas/pendentes`
+- Webhook stub preparado pra Stripe/ASAAS na v2.2
+
+**White-label completo por tenant**
+- Model `Branding` (logo, cor primária/fundo/texto, domínio custom, nome exibição)
+- Endpoint público `/v1/branding/public/{slug}` — funciona ANTES do login
+- Endpoint admin `/v1/branding/me` (GET + PATCH)
+- Frontend: `BrandingProvider` aplica CSS vars (`--flowlog-primary`, etc)
+- Tema preview ao vivo no `/branding` do admin
+- Logout, header, botões, links — tudo customizável
+
+**Painel admin global (super_admin)**
+- Campo `super_admin` no User (operador SaaS, não cliente)
+- Seed: `SUPER_ADMIN_EMAIL` + `SUPER_ADMIN_SENHA` no .env → cria user no startup
+- `/v1/admin/stats` — MRR, faturamento do mês, inadimplência, tenants em trial
+- `/v1/admin/tenants` — lista com filtros (plano, ativo)
+- `/v1/admin/tenants/{id}/suspender` e `/reativar` — bloqueia login
+- `/v1/admin/users/{id}/promover-super-admin` — expande time
+- Todos retornam 403 pra user comum (testado)
+
+**E-mail self-hosted (Mailpit)**
+- `cloud/email/` — templates + service
+- 4 templates: boas-vindas, trial expira, fatura gerada, fatura paga
+- Provider: `stub` (dev) ou `smtp` (Mailpit, Postfix, Gmail, etc)
+- Mailpit já configurado no `docker-compose.cloud.yml` (porta 8025 web UI)
+- E-mail de boas-vindas já dispara no signup
+
+**PWA**
+- `manifest.json` com nome, ícones 192/512, theme color
+- `sw.js` — service worker (network-first pra /v1/*, cache-first pro resto)
+- Apple touch icon, iOS web app meta, viewport-fit
+- Ícones 192/512 gerados (gradiente azul + wave logo)
+- PWA instalável no celular
+
+**Google SSO (grátis)**
+- `cloud/auth/google.py` — verifica `id_token` contra certificados do Google
+- `POST /v1/auth/google/login` — login se email já existe
+- `POST /v1/auth/google/signup` — cria tenant + admin se email novo
+- `GoogleButton.jsx` no frontend (carrega SDK on-demand)
+- OAuth Client ID via `VITE_GOOGLE_CLIENT_ID` (frontend) e `GOOGLE_CLIENT_ID` (backend)
+
+**Sentry (grátis, no-op sem DSN)**
+- `cloud/observability/sentry.py` — init seguro
+- Free tier 5k eventos/mês, captura exceptions não tratadas
+- Filtra /v1/health e OPTIONS (barulho)
+- `init_sentry()` chamado no startup do FastAPI
+- Frontend: `lib/sentry.js` + `@sentry/react` (não-bloqueante)
+
+**Deploy configs (zero config)**
+- `fly.toml` — Fly.io free tier (3 shared VMs, 256MB)
+- `cloudflare/_headers` + `_redirects` — Cloudflare Pages (free)
+- `Dockerfile.cloud` já builda frontend e serve via FastAPI
+- Setup: `fly launch` + `fly postgres create` + `fly secrets set JWT_SECRET=...` + `fly deploy`
+
+**CI/CD GitHub Actions (grátis)**
+- `.github/workflows/ci.yml`
+- 4 jobs paralelos: lint (ruff+black), test+cov, build-frontend, docker-build
+- Testa com Postgres, valida Docker, push opcional pra GHCR
+- 2.000 min/mês (free), ~5 min/build = 400 builds/mês
+
+**Marketing site `flowlog.app`**
+- `web/marketing/index.html` — 1 página completa (hero, features, pricing, footer)
+- Pronto pra Cloudflare Pages (drag-and-drop)
+- 3 planos com CTAs (signup com `?plano=free|pro|business`)
+- Mobile responsive, gradiente azul, ícone emoji
+
+**Frontend Cloud v2.1**
+- Páginas: `Login` (com Google), `Signup` (com Google), `Dashboard`, `Produtos`, `Billing`, `Branding`
+- Branding aplicado em runtime (logo + cores no header, botões, links)
+- Banner de faturas pendentes no Billing
+- Preview ao vivo no Branding
+
+**Testes**
+- 29 testes novos em `tests/test_v2_1.py` (billing, branding, admin, Google, email, PWA files)
+- Cobertura: **70.06% (≥ 70% fail-under)** ✅
+- **274 testes totais, 0 falhas**
+
+### O que NÃO foi feito (de propósito, plano free)
+
+- ❌ Stripe/ASAAS real (billing manual via PIX/boleto resolve até 50 clientes)
+- ❌ Resend/SendGrid pago (Mailpit self-hosted é grátis e funciona)
+- ❌ PostHog (Sentry free já cobre)
+- ❌ Push notifications (PWA sem push já entrega 80% do valor mobile)
+- ❌ Microsoft SSO (Google é grátis e suficiente)
+- ❌ Status page (Instatus free é nice-to-have, não crítico)
+- ❌ Integrações Tiny/Bling/Shopify (só sob demanda, cada cliente pede)
+- ❌ Zapier oficial ($19/mês — Make free tier substitui)
+
+### Decisão estratégica: POR QUE PLANO FREE
+
+Análise de ROI no commit: até MRR R$ 5k/mês, plano free cobre 100% das
+necessidades. Stripe/Resend/PostHog só passam a valer a pena quando o
+volume de clientes e transações justifica a comissão mensal.
+
+**Quando migrar pra plano pago:**
+- MRR R$ 5-20k: Resend ($20/mês) + Fly.io paid ($10/mês) = ~R$ 150/mês
+- MRR R$ 20k+: Stripe automatizado + Make + PostHog = ~R$ 500/mês
+- MRR R$ 100k+: considerar enterprise (Sentry team, AWS, etc)
+
 ## [2.0.0] - 2026-07-13
 
 ### Added (v2.0 — FlowLog Cloud MVP)

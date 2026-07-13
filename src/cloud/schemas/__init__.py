@@ -1,4 +1,4 @@
-"""Schemas Pydantic do Cloud (v2.0)."""
+"""Schemas Pydantic do Cloud (v2.1)."""
 
 from cloud.schemas.auth import (
     LoginRequest,
@@ -15,8 +15,29 @@ from cloud.schemas.auth import (
     TenantOut,
     TenantUpdate,
 )
+from cloud.schemas.v2_1 import (
+    AdminStats,
+    BrandingOut,
+    BrandingPublic,
+    BrandingUpdate,
+    FaturaCreate,
+    FaturaMarcarPago,
+    FaturaOut,
+    GoogleLoginRequest,
+    GoogleSignupRequest,
+    TenantAdminOut,
+)
 
 __all__ = [
+    "AdminStats",
+    "BrandingOut",
+    "BrandingPublic",
+    "BrandingUpdate",
+    "FaturaCreate",
+    "FaturaMarcarPago",
+    "FaturaOut",
+    "GoogleLoginRequest",
+    "GoogleSignupRequest",
     "LoginRequest",
     "LoginResponse",
     "MovimentacaoIn",
@@ -28,6 +49,7 @@ __all__ = [
     "RefreshResponse",
     "SignupRequest",
     "SignupResponse",
+    "TenantAdminOut",
     "TenantOut",
     "TenantUpdate",
 ]

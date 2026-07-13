@@ -6,16 +6,20 @@ Multi-tenant real: cada row de negócio tem `tenant_id` apontando aqui.
 
 from datetime import datetime
 from enum import Enum as PyEnum
+from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, String, Boolean, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import DateTime, Boolean, Enum, String, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from cloud.database import Base
 from cloud.models.base import gen_uuid
 
+if TYPE_CHECKING:
+    from cloud.models.user import User
+
 
 class Plano(str, PyEnum):
-    """Planos de assinatura do Cloud (v2.0)."""
+    """Planos de assinatura do Cloud."""
 
     FREE = "free"           # 1 user, 100 produtos
     PRO = "pro"             # 5 users, ilimitado
@@ -43,6 +47,13 @@ class Tenant(Base):
     # Metadata
     criado_em: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationship com users (lazy='raise' pra forçar selectinload)
+    users: Mapped[list["User"]] = relationship(
+        back_populates="tenant_obj",
+        lazy="raise",
+        viewonly=True,
     )
 
     def __repr__(self) -> str:
