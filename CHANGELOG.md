@@ -10,6 +10,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/).*
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-07-13
+
+### Added (v1.5 — FlowLog Licença MVP)
+- **Empacotamento instalável**:
+  - `pyproject.toml` com metadados de pacote, entry points (`flowlog`, `flowlog-cli`), deps runtime
+  - `flowlog.spec` (PyInstaller) com hidden imports do mysql-connector
+  - `installer.iss` (Inno Setup) com wizard, atalho, uninstaller, EULA, ícone
+- **Sistema de licença (HMAC)** (`src/licenca.py`):
+  - Chave de 25 chars (XXXXX-XXXXX-XXXXX-XXXXX-XXXXX) com payload binário + assinatura
+  - Validação local (sem servidor externo), HMAC-SHA256 com segredo vendor
+  - **Trial de 30 dias** automático no primeiro start, com marca d'água nos relatórios
+  - Persistência em `%APPDATA%/FlowLog/license.json` (Windows) / `~/.config/flowlog/` (Linux)
+  - `cliente_hash` em vez de nome (privacidade — nome nunca vai pro disco)
+- **Setup wizard** (`src/setup_wizard.py`):
+  - 5 passos: EULA → MySQL config → conexão → schema.sql → admin user
+  - Detecta primeiro start, idempotente (pula se já configurado)
+  - `flowlog --setup` força o wizard
+- **Entry point CLI** (`src/__main__.py`):
+  - Detecta wizard se necessário
+  - `flowlog --version`, `flowlog --setup`, `flowlog --check-update`, `flowlog --ativar CHAVE`
+- **Auto-update via GitHub Releases** (`src/auto_update.py`):
+  - Consulta `api.github.com/repos/.../releases/latest`
+  - Compara versões, avisa no startup (não-bloqueante, thread separada)
+  - Timeout 5s, falha silenciosa em rede ruim
+- **i18n** (`src/i18n.py`):
+  - PT-BR (default) + EN, sem dependência de gettext
+  - Detecção automática via `FLOWLOG_LANG`, `LANG`, `LC_ALL`
+  - Função `t("chave", **kwargs)` com fallback pro default
+- **Documentação de venda** (`docs/venda/`):
+  - `INSTALL.md` — passo a passo Windows/Linux/macOS
+  - `FEATURES.md` — lista completa de features (com flags "não está na Licença")
+  - `FAQ.md` — 30+ perguntas sobre produto, licença, segurança, comparação
+  - `LICENSE.md` — EULA em PT-BR (juridicamente válida)
+- **40 testes novos** (total 178, cobertura 82%):
+  - `tests/test_licenca.py` — 19 testes (gerar/validar/ativar/watermark)
+  - `tests/test_i18n.py` — 9 testes (tradução, detecção, fallback)
+  - `tests/test_auto_update.py` — 9 testes (parsing, comparação, falhas de rede)
+  - Mais refactor de CSV tests
+
+### Estrutura do projeto (final v1.5)
+```
+FlowLog/
+├── src/                    # código da aplicação
+│   ├── __main__.py        # entry point (novo)
+│   ├── licenca.py         # licença HMAC (novo)
+│   ├── setup_wizard.py    # wizard 5 passos (novo)
+│   ├── auto_update.py     # check GitHub releases (novo)
+│   ├── i18n.py            # PT-BR + EN (novo)
+│   ├── main.py            # menu CLI
+│   ├── database.py        # pool MySQL
+│   ├── ... (todos os feature modules + services + repositories)
+├── tests/                 # 178 testes
+├── docs/
+│   └── venda/             # docs de venda (novo)
+├── assets/                # ícones (placeholder)
+├── flowlog.spec           # PyInstaller (novo)
+├── installer.iss          # Inno Setup (novo)
+├── LICENSE.md             # EULA (novo)
+├── pyproject.toml         # metadados de pacote
+├── schema.sql
+├── CHANGELOG.md
+├── README.md
+└── ROADMAP.md
+```
+
+## [Unreleased]
+
 ### Estratégia (v1.5+ — virada de negócio)
 - **Diferenciais exclusivos por SKU** documentados no `ROADMAP.md`. Regra: feature core de gestão vai pra ambos; exclusivos da Licença são baseados em restrições do on-premise (offline, hardware local, dados locais, customização); exclusivos do Cloud são baseados em restrições do SaaS (mobile, IA, integrações web, auto-update).
 - **2 SKUs definidos** (refinamento — era 3, agora consolida):

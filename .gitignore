@@ -7,4 +7,4 @@ __pycache__/
 *.pyc
 
 # Configurações do VS Code
-.vscode/
+.vscode/.coverage

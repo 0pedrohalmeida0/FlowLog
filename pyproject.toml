@@ -1,9 +1,77 @@
 # ============================================================
 # FlowLog — pyproject.toml
 # ============================================================
-# Configuração central de ferramentas (pytest, ruff, black, mypy).
-# A config de pacote instalável (v1.5) virá aqui também.
+# Configuração central de ferramentas (pytest, ruff, black, mypy)
+# + metadados do pacote instalável (v1.5).
 # ============================================================
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flowlog"
+version = "1.5.0"
+description = "Sistema de gestão de inventário com integridade de dados de nível bancário"
+readme = "README.md"
+license = {text = "Proprietary"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Pedro Almeida", email = "contato@flowlog.app"},
+]
+keywords = ["inventory", "stock", "warehouse", "erp", "flowlog"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: Other/Proprietary License",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Financial :: Investment",
+    "Topic :: Database",
+]
+
+# Runtime deps: tudo o que precisa pra rodar (sem MySQL instalado)
+dependencies = [
+    "mysql-connector-python>=8.0.32",
+    "bcrypt>=4.0.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "ruff>=0.1.0",
+    "black>=23.0.0",
+    "mypy>=1.7.0",
+]
+build = [
+    "pyinstaller>=6.0",
+]
+
+[project.scripts]
+# CLI principal: `flowlog` chama src.__main__:main
+flowlog = "src.__main__:main"
+# Versão CLI pura (pula wizard, requer .env pronto)
+flowlog-cli = "src.main:menu"
+
+[project.urls]
+Homepage = "https://github.com/0pedrohalmeida0/FlowLog"
+Documentation = "https://github.com/0pedrohalmeida0/FlowLog#readme"
+Changelog = "https://github.com/0pedrohalmeida0/FlowLog/blob/main/CHANGELOG.md"
+Issues = "https://github.com/0pedrohalmeida0/FlowLog/issues"
+
+[tool.setuptools]
+# Pacote flat-layout: src/ é o source root
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["*"]
+exclude = ["__pycache__", "teste_insercao.py"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"
