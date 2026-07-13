@@ -10,16 +10,25 @@ from repositories.base import BaseRepository
 class ProdutoRepository(BaseRepository):
     _TABLE = "produtos"
 
-    def listar_todos(self) -> list[dict]:
-        """Retorna todos os produtos (sem join com fornecedor), ordenados por id."""
+    def listar_todos(self, empresa_id: int | None = None) -> list[dict]:
+        """Retorna todos os produtos (sem join com fornecedor), ordenados por id.
+
+        v1.6: se `empresa_id` for fornecido, filtra por tenant.
+        """
         conn = self._connect()
         try:
             cur = conn.cursor(dictionary=True)
-            cur.execute(
-                "SELECT id, nome, quantidade, preco_custo, fornecedor_id, "
+            sql = (
+                "SELECT id, empresa_id, nome, quantidade, preco_custo, fornecedor_id, "
                 "alerta_minimo, data_entrada "
-                f"FROM {self._TABLE} ORDER BY id ASC"
+                f"FROM {self._TABLE}"
             )
+            params = []
+            if empresa_id is not None:
+                sql += " WHERE empresa_id = %s"
+                params.append(empresa_id)
+            sql += " ORDER BY id ASC"
+            cur.execute(sql, tuple(params))
             return cur.fetchall()
         finally:
             cur.close()
@@ -55,34 +64,46 @@ class ProdutoRepository(BaseRepository):
         )
         return cur.fetchone()
 
-    def listar_por_fornecedor(self, fornecedor_id: int) -> list[dict]:
+    def listar_por_fornecedor(
+        self, fornecedor_id: int, empresa_id: int | None = None
+    ) -> list[dict]:
         conn = self._connect()
         try:
             cur = conn.cursor(dictionary=True)
-            cur.execute(
+            sql = (
                 "SELECT id, nome, quantidade, preco_custo, alerta_minimo "
-                f"FROM {self._TABLE} WHERE fornecedor_id = %s ORDER BY nome",
-                (fornecedor_id,),
+                f"FROM {self._TABLE} WHERE fornecedor_id = %s"
             )
+            params = [fornecedor_id]
+            if empresa_id is not None:
+                sql += " AND empresa_id = %s"
+                params.append(empresa_id)
+            sql += " ORDER BY nome"
+            cur.execute(sql, tuple(params))
             return cur.fetchall()
         finally:
             cur.close()
             conn.close()
 
-    def listar_abaixo_do_minimo(self) -> list[dict]:
+    def listar_abaixo_do_minimo(self, empresa_id: int | None = None) -> list[dict]:
         """Produtos com quantidade <= alerta_minimo (alerta_minimo não nulo)."""
         conn = self._connect()
         try:
             cur = conn.cursor(dictionary=True)
-            cur.execute(
+            sql = (
                 "SELECT p.nome, p.quantidade, p.alerta_minimo, "
                 "       COALESCE(f.razao_social, '(sem fornecedor)') AS fornecedor "
                 f"FROM {self._TABLE} p "
                 "LEFT JOIN fornecedores f ON p.fornecedor_id = f.id "
                 "WHERE p.alerta_minimo IS NOT NULL "
-                "  AND p.quantidade <= p.alerta_minimo "
-                "ORDER BY (p.alerta_minimo - p.quantidade) DESC"
+                "  AND p.quantidade <= p.alerta_minimo"
             )
+            params = []
+            if empresa_id is not None:
+                sql += " AND p.empresa_id = %s"
+                params.append(empresa_id)
+            sql += " ORDER BY (p.alerta_minimo - p.quantidade) DESC"
+            cur.execute(sql, tuple(params))
             return cur.fetchall()
         finally:
             cur.close()
@@ -95,14 +116,22 @@ class ProdutoRepository(BaseRepository):
         preco_custo: float,
         fornecedor_id: int | None,
         alerta_minimo: int | None,
+        empresa_id: int | None = None,  # v1.6
     ) -> int:
         """Insere produto; retorna o id gerado."""
         with self.transaction() as (conn, cur):
             cur.execute(
                 f"INSERT INTO {self._TABLE} "
-                "(nome, quantidade, preco_custo, fornecedor_id, alerta_minimo) "
-                "VALUES (%s, %s, %s, %s, %s)",
-                (nome, quantidade, preco_custo, fornecedor_id, alerta_minimo),
+                "(empresa_id, nome, quantidade, preco_custo, fornecedor_id, alerta_minimo) "
+                "VALUES (%s, %s, %s, %s, %s, %s)",
+                (
+                    empresa_id,
+                    nome,
+                    quantidade,
+                    preco_custo,
+                    fornecedor_id,
+                    alerta_minimo,
+                ),
             )
             return cur.lastrowid
 

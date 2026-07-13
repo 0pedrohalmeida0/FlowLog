@@ -14,13 +14,20 @@ _sessao = {
     "nivel_acesso": None,
     "login_em": None,
     "ultimo_acesso": None,
+    # v1.6: multi-filial
+    "empresa_id": None,  # empresa atualmente em operação
+    "nivel_empresa": None,  # nível do usuário NESTA empresa (pode diferir do global)
+    # v1.6: contexto de auditoria (preenchido pela API/CLI)
+    "ip": None,
+    "user_agent": None,
 }
 
 
-def login(usuario_id, username, nivel_acesso):
+def login(usuario_id, username, nivel_acesso, ip=None, user_agent=None):
     """Registra o usuário logado na sessão atual.
 
     Inicializa login_em e ultimo_acesso com o mesmo timestamp.
+    Opcionalmente recebe ip e user_agent (v1.6: pra audit log via API).
     """
     now = datetime.now()
     _sessao["usuario_id"] = usuario_id
@@ -28,12 +35,66 @@ def login(usuario_id, username, nivel_acesso):
     _sessao["nivel_acesso"] = nivel_acesso
     _sessao["login_em"] = now
     _sessao["ultimo_acesso"] = now
+    _sessao["ip"] = ip
+    _sessao["user_agent"] = user_agent
+    # empresa_id e nivel_empresa ficam None — são setados depois via
+    # `setar_empresa_atual()` ou no fluxo de seleção de filial.
 
 
 def logout():
     """Limpa a sessão (chamado na saída do sistema ou auto-logout)."""
     for k in _sessao:
         _sessao[k] = None
+
+
+# ============================================================
+# v1.6: multi-filial
+# ============================================================
+
+
+def setar_empresa_atual(empresa_id: int, nivel_empresa: int) -> None:
+    """Define a empresa em que o usuário está operando.
+
+    Chamado após o usuário escolher uma filial no menu, ou
+    automaticamente quando a sessão só tem acesso a 1 empresa.
+    """
+    _sessao["empresa_id"] = empresa_id
+    _sessao["nivel_empresa"] = nivel_empresa
+
+
+def limpar_empresa_atual() -> None:
+    """Volta para o estado "sem empresa selecionada" (ex: logout parcial)."""
+    _sessao["empresa_id"] = None
+    _sessao["nivel_empresa"] = None
+
+
+def empresa_atual() -> int | None:
+    """Retorna o ID da empresa atualmente em operação, ou None."""
+    return _sessao.get("empresa_id")
+
+
+def nivel_empresa_atual() -> int | None:
+    """Retorna o nível do usuário NESTA empresa (1, 2, 3) ou None."""
+    return _sessao.get("nivel_empresa")
+
+
+# ============================================================
+# v1.6: contexto de auditoria
+# ============================================================
+
+
+def setar_contexto_auditoria(ip: str = None, user_agent: str = None) -> None:
+    """Define o contexto de auditoria (chamado pela API REST ou CLI)."""
+    _sessao["ip"] = ip
+    _sessao["user_agent"] = user_agent
+
+
+def ip_atual() -> str | None:
+    return _sessao.get("ip")
+
+
+def user_agent_atual() -> str | None:
+    return _sessao.get("user_agent")
 
 
 def usuario_atual():

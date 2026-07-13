@@ -42,6 +42,7 @@ class HistoricoRepository(BaseRepository):
         self,
         cursor,
         produto_id: int,
+        empresa_id: int,
         tipo: str,
         quantidade: int,
         usuario_id: int | None,
@@ -50,11 +51,12 @@ class HistoricoRepository(BaseRepository):
 
         NÃO abre conexão própria — deve ser chamado dentro de uma
         transação (cursor do `BaseRepository.transaction()`).
+        v1.6: inclui empresa_id (multi-tenant).
         """
         cursor.execute(
-            f"INSERT INTO {self._TABLE} (produto_id, tipo, quantidade, usuario_id) "
-            "VALUES (%s, %s, %s, %s)",
-            (produto_id, tipo, quantidade, usuario_id),
+            f"INSERT INTO {self._TABLE} (produto_id, empresa_id, tipo, quantidade, usuario_id) "
+            "VALUES (%s, %s, %s, %s, %s)",
+            (produto_id, empresa_id, tipo, quantidade, usuario_id),
         )
 
     def total_saidas_por_produto(self) -> list[dict]:

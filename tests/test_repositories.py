@@ -107,7 +107,8 @@ class TestProdutoRepository:
         # SQL gerado
         args, _ = mock_cursor.execute.call_args
         assert "INSERT INTO produtos" in args[0]
-        assert args[1] == ("Teclado", 10, 50.0, 1, 5)
+        # v1.6: empresa_id é o primeiro parâmetro (default None)
+        assert args[1] == (None, "Teclado", 10, 50.0, 1, 5)
 
     def test_atualizar_campos_constroi_set_dinamico(self):
         mock_db = MagicMock()
@@ -282,13 +283,16 @@ class TestHistoricoRepository:
         mock_cursor = MagicMock()
 
         repo = HistoricoRepository(db=mock_db)
-        repo.inserir(mock_cursor, produto_id=1, tipo="SAIDA", quantidade=5, usuario_id=2)
+        # v1.6: agora inclui empresa_id
+        repo.inserir(
+            mock_cursor, produto_id=1, empresa_id=1, tipo="SAIDA", quantidade=5, usuario_id=2
+        )
 
         # O cursor do chamador foi usado
         mock_cursor.execute.assert_called_once()
         args, _ = mock_cursor.execute.call_args
         assert "INSERT INTO historico_movimentacoes" in args[0]
-        assert args[1] == (1, "SAIDA", 5, 2)
+        assert args[1] == (1, 1, "SAIDA", 5, 2)
         # Nenhuma conexão foi aberta pelo repository
         mock_db.connect.assert_not_called()
         mock_db.transaction.assert_not_called()

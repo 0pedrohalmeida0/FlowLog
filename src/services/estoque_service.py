@@ -12,7 +12,7 @@ from exceptions import EstoqueInsuficienteError, NotFoundError, ValidationError
 from logging_config import get_logger
 from repositories.historico_repository import HistoricoRepository
 from repositories.produto_repository import ProdutoRepository
-from session import usuario_id_atual
+from session import empresa_atual, usuario_id_atual
 
 logger = get_logger(__name__)
 
@@ -42,13 +42,15 @@ class EstoqueService:
         usuario_id = usuario_id_atual()
 
         with self._produtos.transaction() as (conn, cur):
+            # v1.6: filtra por empresa (multi-tenant)
             cur.execute(
-                "SELECT nome, quantidade FROM produtos WHERE id = %s FOR UPDATE",
-                (produto_id,),
+                "SELECT nome, quantidade FROM produtos "
+                "WHERE id = %s AND empresa_id = %s FOR UPDATE",
+                (produto_id, empresa_atual()),
             )
             row = cur.fetchone()
             if not row:
-                raise NotFoundError(f"Produto com ID {produto_id} não encontrado.")
+                raise NotFoundError(f"Produto com ID {produto_id} não encontrado nesta filial.")
 
             nome, qtd_anterior = row
             qtd_nova = qtd_anterior + quantidade
@@ -57,7 +59,9 @@ class EstoqueService:
                 "UPDATE produtos SET quantidade = %s WHERE id = %s",
                 (qtd_nova, produto_id),
             )
-            self._historico.inserir(cur, produto_id, "ENTRADA", quantidade, usuario_id)
+            self._historico.inserir(
+                cur, produto_id, empresa_atual(), "ENTRADA", quantidade, usuario_id
+            )
 
         logger.info(
             "Entrada: produto_id=%d qtd=+%d usuario_id=%s",
@@ -88,12 +92,13 @@ class EstoqueService:
 
         with self._produtos.transaction() as (conn, cur):
             cur.execute(
-                "SELECT nome, quantidade FROM produtos WHERE id = %s FOR UPDATE",
-                (produto_id,),
+                "SELECT nome, quantidade FROM produtos "
+                "WHERE id = %s AND empresa_id = %s FOR UPDATE",
+                (produto_id, empresa_atual()),
             )
             row = cur.fetchone()
             if not row:
-                raise NotFoundError(f"Produto com ID {produto_id} não encontrado.")
+                raise NotFoundError(f"Produto com ID {produto_id} não encontrado nesta filial.")
 
             nome, qtd_atual = row
 
@@ -105,7 +110,9 @@ class EstoqueService:
                 "UPDATE produtos SET quantidade = %s WHERE id = %s",
                 (qtd_nova, produto_id),
             )
-            self._historico.inserir(cur, produto_id, "SAIDA", quantidade, usuario_id)
+            self._historico.inserir(
+                cur, produto_id, empresa_atual(), "SAIDA", quantidade, usuario_id
+            )
 
         logger.info(
             "Saída: produto_id=%d qtd=-%d usuario_id=%s",

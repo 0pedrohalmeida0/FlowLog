@@ -10,7 +10,7 @@ from logging_config import get_logger
 from repositories.fornecedor_repository import FornecedorRepository
 from repositories.log_edicoes_repository import LogEdicoesRepository
 from repositories.produto_repository import ProdutoRepository
-from session import usuario_id_atual
+from session import empresa_atual, usuario_id_atual
 from utils import normalize_cnpj, validar_cnpj
 
 logger = get_logger(__name__)
@@ -82,6 +82,7 @@ class ProdutoService:
             preco_custo=preco_custo,
             fornecedor_id=fornecedor_id,
             alerta_minimo=alerta_minimo,
+            empresa_id=empresa_atual(),  # v1.6: multi-tenant
         )
         logger.info("Produto cadastrado: id=%d nome=%s", novo_id, nome)
         return novo_id
@@ -183,19 +184,29 @@ class ProdutoService:
         """ME-01: fachada pública para o feature module.
 
         Substitui o uso direto de `service._produtos.buscar_por_id()`.
+        v1.6: respeita tenant — se o produto for de outra empresa, retorna None.
         """
-        return self._produtos.buscar_por_id(produto_id)
+        prod = self._produtos.buscar_por_id(produto_id)
+        if prod is None:
+            return None
+        emp_atual = empresa_atual()
+        if emp_atual is not None and prod.get("empresa_id") != emp_atual:
+            return None  # outra filial — não vaza
+        return prod
 
     def listar_todos(self) -> list[dict]:
-        """ME-01: fachada pública para o feature module."""
-        return self._produtos.listar_todos()
+        """ME-01: fachada pública para o feature module.
+
+        v1.6: filtra automaticamente pela empresa atual (multi-tenant).
+        """
+        return self._produtos.listar_todos(empresa_id=empresa_atual())
 
     def listar_abaixo_do_minimo(self) -> list[dict]:
         """Produtos com `quantidade <= alerta_minimo` (alerta_minimo não nulo).
 
-        Cada item: {nome, quantidade, alerta_minimo, fornecedor}.
+        v1.6: filtra pela empresa atual.
         """
-        return self._produtos.listar_abaixo_do_minimo()
+        return self._produtos.listar_abaixo_do_minimo(empresa_id=empresa_atual())
 
     @staticmethod
     def _serializar(row) -> dict:

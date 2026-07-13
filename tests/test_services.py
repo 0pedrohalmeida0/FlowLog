@@ -173,12 +173,14 @@ class TestEstoqueService:
         assert "UPDATE produtos" in update_call[0][0]
         assert update_call[0][1] == (15, 1)
         # historico.inserir chamado com (cur, 1, 'ENTRADA', 5, 99)
+        # v1.6: agora inclui empresa_id como segundo arg posicional
         self.mock_hist.inserir.assert_called_once()
         args = self.mock_hist.inserir.call_args
-        assert args[0][1] == 1
-        assert args[0][2] == "ENTRADA"
-        assert args[0][3] == 5
-        assert args[0][4] == 99  # usuario_id
+        # args[0] = (cur, produto_id, empresa_id, tipo, qtd, usuario_id)
+        assert args[0][1] == 1  # produto_id
+        assert args[0][3] == "ENTRADA"  # tipo
+        assert args[0][4] == 5  # quantidade
+        assert args[0][5] == 99  # usuario_id
 
     def test_saida_estoque_insuficiente_levanta_excecao(self):
         _, mock_cur = _setup_transacao_mock(self.mock_prod, None)
@@ -196,7 +198,8 @@ class TestEstoqueService:
         assert resultado["qtd_nova"] == 7
         self.mock_hist.inserir.assert_called_once()
         args = self.mock_hist.inserir.call_args
-        assert args[0][2] == "SAIDA"
+        # v1.6: args[0] = (cur, produto_id, empresa_id, tipo, qtd, usuario_id)
+        assert args[0][3] == "SAIDA"
 
 
 # ============================================================

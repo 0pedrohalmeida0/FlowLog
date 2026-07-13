@@ -38,6 +38,10 @@ dependencies = [
     "mysql-connector-python>=8.0.32",
     "bcrypt>=4.0.0",
     "python-dotenv>=1.0.0",
+    # v1.6 — API REST local
+    "fastapi>=0.100.0",
+    "uvicorn>=0.23.0",
+    "pydantic>=2.0.0",
 ]
 
 [project.optional-dependencies]
@@ -57,6 +61,8 @@ build = [
 flowlog = "src.__main__:main"
 # Versão CLI pura (pula wizard, requer .env pronto)
 flowlog-cli = "src.main:menu"
+# v1.6 — API REST local
+flowlog-api = "src.api.server:main"
 
 [project.urls]
 Homepage = "https://github.com/0pedrohalmeida0/FlowLog"
